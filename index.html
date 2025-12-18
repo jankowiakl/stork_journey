@@ -261,9 +261,18 @@
       transition: opacity 80ms linear;
     }
 
-    .metaGrid { display: grid; gap: 6px; font-size: 12px; color: var(--text); }
+    .metaGrid { 
+      display: grid; 
+      gap: 6px; 
+      font-size: 12px; 
+      color: var(--text); 
+      text-align: center;
+    }
     .metaGrid b { font-size: 13px; }
     .metaGrid .muted { color: var(--muted); }
+    #metaTime, #metaCoords {
+      font-size: 24px;
+    }
 
     .pill {
       display: inline-flex; align-items: center; gap: 8px;

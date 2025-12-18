@@ -1,0 +1,1192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>White Stork Photo Flight Viewer</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+  <style>
+    :root {
+      --text: #e8eefc;
+      --muted: #aab7da;
+      --accent: #77d1ff;
+      --danger: #ff6b6b;
+      --ok: #39d98a;
+      --border: rgba(255,255,255,0.10);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 16px;
+    }
+
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: linear-gradient(180deg, #070b14 0%, #0b1220 60%, #07101e 100%);
+      color: var(--text);
+    }
+
+    header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    header h1 { font-size: 16px; font-weight: 700; margin: 0; letter-spacing: 0.2px; }
+    header .hint { font-size: 12px; color: var(--muted); margin: 0; }
+
+    .wrap {
+      display: grid;
+      grid-template-columns: 1.65fr 1.15fr;
+      gap: 14px;
+      padding: 14px;
+      height: calc(100vh - 62px);
+      box-sizing: border-box;
+      min-height: 0;
+    }
+
+    .card {
+      background: radial-gradient(1200px 800px at 30% -20%, rgba(119,209,255,0.12), transparent 55%),
+                  linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      min-height: 0;
+      position: relative;
+    }
+
+    .mapStack { height: 100%; min-height: 0; }
+    #mapFollow { width: 100%; height: 100%; }
+
+    .overviewInset {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      width: min(38vw, 360px);
+      height: 220px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+      background: rgba(0,0,0,0.25);
+      z-index: 650;
+    }
+    #mapOverview { width: 100%; height: 100%; }
+
+    .badge {
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      z-index: 700;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.35);
+      backdrop-filter: blur(8px);
+      font-size: 12px;
+      color: var(--text);
+      pointer-events: none;
+    }
+    .badge.overview { left: auto; right: 18px; top: 18px; }
+
+    .side {
+      position: relative;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 14px;
+      min-height: 0;
+      overflow: hidden;
+      padding-right: 2px;
+    }
+
+    .panel { padding: 14px; }
+
+    .panelHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .panelHeader .title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+    .panelHeader .subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-left: 10px;
+      font-weight: 500;
+    }
+    .panelHeaderLeft { display: flex; align-items: baseline; flex-wrap: wrap; }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+
+    select, input[type="range"], input[type="number"] {
+      width: 100%;
+      box-sizing: border-box;
+      background: rgba(0,0,0,0.25);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      padding: 10px 10px;
+      outline: none;
+    }
+    input[type="file"] { width: 100%; color: var(--muted); }
+
+    button {
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(119,209,255,0.20), rgba(119,209,255,0.08));
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 650;
+      letter-spacing: 0.2px;
+    }
+    button.secondary { background: rgba(0,0,0,0.20); }
+    button.danger { background: linear-gradient(180deg, rgba(255,107,107,0.22), rgba(255,107,107,0.08)); }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    button.tiny {
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-weight: 650;
+      font-size: 12px;
+    }
+
+    .btnrow { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+
+    .status {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+
+    .settingsBody { display: block; }
+    .settingsCollapsed .settingsBody { display: none; }
+    .settingsCollapsed .panelHeader { margin-bottom: 0; }
+    .settingsCollapsed .status { margin-top: 8px; }
+
+    /* --- Settings overlay (so controls never get pushed under the photo) --- */
+    /* Note: Overlay removed to fix overlapping; now stacks vertically */
+    #settingsCard{
+      /* position: absolute; */ /* Removed */
+      /* left: 0; */ /* Removed */
+      /* right: 0; */ /* Removed */
+      /* top: 0; */ /* Removed */
+      /* z-index: 1200; */ /* Removed */
+      /* max-height: calc(100% - 160px); */ /* Removed */
+      padding: 14px;                 /* Match other panels */
+      font-size: 12px;
+    }
+
+    /* Scroll only the body, keep header visible */
+    #settingsCard .settingsBody{
+      max-height: 300px; /* Arbitrary max to prevent overgrowth; adjust as needed */
+      overflow: auto;
+      padding-right: 6px;
+    }
+
+    /* Smaller typography & tighter spacing in Settings only */
+    #settingsCard label{ font-size: 11px; margin-bottom: 4px; }
+    #settingsCard .panelHeader{ margin-bottom: 8px; }
+    #settingsCard .panelHeader .title{ font-size: 12px; }
+    #settingsCard .panelHeader .subtitle{ font-size: 11px; }
+    #settingsCard .row{ gap: 8px; margin-top: 8px; }
+    #settingsCard .btnrow{ gap: 8px; margin-top: 10px; }
+    #settingsCard select,
+    #settingsCard input[type="range"],
+    #settingsCard input[type="number"]{
+      padding: 8px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+    #settingsCard button{
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+    #settingsCard button.tiny{
+      padding: 6px 8px;
+      border-radius: 9px;
+      font-size: 11px;
+    }
+    #settingsCard .status{ font-size: 11px; }
+
+    /* When hidden, make it a thin bar so it doesn't cover the photo */
+    #settingsCard.settingsCollapsed{
+      max-height: 52px;
+    }
+    #settingsCard.settingsCollapsed .status{
+      display: none;
+    }
+
+
+    .checkRow {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .checkRow label {
+      margin: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+      font-weight: 650;
+    }
+    .checkRow input[type="checkbox"] { transform: translateY(1px); }
+
+    .photoCard {
+      height: 100%;
+      min-height: 260px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(0,0,0,0.15));
+    }
+    .photoStage { position: relative; height: 100%; width: 100%; overflow: hidden; }
+    .photoStage img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: contain;
+      background: rgba(0,0,0,0.25);
+      transition: opacity 80ms linear;
+    }
+
+    .metaGrid { display: grid; gap: 6px; font-size: 12px; color: var(--text); }
+    .metaGrid b { font-size: 13px; }
+    .metaGrid .muted { color: var(--muted); }
+
+    .pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 10px; border-radius: 999px;
+      border: 1px solid var(--border); background: rgba(0,0,0,0.18);
+      margin-right: 8px;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: inline-block; }
+    .dot.ok { background: var(--ok); }
+    .dot.bad { background: var(--danger); }
+
+    .leaflet-control-attribution, .leaflet-control-scale {
+      background: rgba(0,0,0,0.35) !important;
+      color: rgba(255,255,255,0.75) !important;
+      border-radius: 10px !important;
+      padding: 2px 6px !important;
+      border: 1px solid rgba(255,255,255,0.15) !important;
+      backdrop-filter: blur(6px);
+    }
+    .leaflet-container { background: #0a0f1c; }
+
+    .photoTools{
+      position:absolute;
+      right:12px;
+      top:12px;
+      z-index:20;
+      display:flex;
+      gap:8px;
+    }
+
+    .miniNote {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .photoModal{
+      position:fixed;
+      inset:0;
+      z-index:5000;
+      display:none;
+      background:rgba(0,0,0,0.72);
+      backdrop-filter: blur(8px);
+    }
+    .photoModal.open{ display:block; }
+    .photoModal .inner{
+      position:absolute;
+      inset:18px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,0.18);
+      overflow:hidden;
+      box-shadow: 0 30px 70px rgba(0,0,0,0.55);
+      background: rgba(0,0,0,0.35);
+    }
+    .photoModal .stage{
+      position:absolute;
+      inset:0;
+    }
+    .photoModal img{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      background: rgba(0,0,0,0.30);
+      transition: opacity 80ms linear;
+    }
+    .photoModal .topbar{
+      position:absolute;
+      left:12px;
+      right:12px;
+      top:12px;
+      z-index:10;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      pointer-events:none;
+    }
+    .photoModal .topbar .left,
+    .photoModal .topbar .right{
+      pointer-events:auto;
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .chip{
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.16);
+      background: rgba(0,0,0,0.35);
+      color: var(--text);
+      font-size:12px;
+      white-space:nowrap;
+    }
+
+  </style>
+</head>
+
+<body>
+<header>
+  <div>
+    <h1>White Stork Photo Flight Viewer</h1>
+    <p class="hint">Main map follows the bird; the inset (top-right) shows the full journey. Loop playback and add relaxing music in Settings.</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="card mapStack">
+    <div class="badge">Follow (zoomed)</div>
+    <div id="mapFollow"></div>
+
+    <div class="overviewInset">
+      <div class="badge overview">Overview</div>
+      <div id="mapOverview"></div>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="card panel settings" id="settingsCard">
+      <div class="panelHeader">
+        <div class="panelHeaderLeft">
+          <span class="title">Settings</span>
+          <span class="subtitle">choose files, bird, playback, loop, music</span>
+        </div>
+        <button id="toggleSettings" class="secondary tiny" type="button">Hide</button>
+      </div>
+
+      <div class="settingsBody" id="settingsBody">
+        <label>1) Select folder with JPG files (Chrome/Edge recommended)</label>
+        <input id="folderInput" type="file" multiple webkitdirectory directory />
+
+        <div class="row">
+          <div>
+            <label>2) Individual (bird id)</label>
+            <select id="birdSelect" disabled>
+              <option value="">—</option>
+            </select>
+          </div>
+          <div>
+            <label>Animation speed</label>
+            <input id="speed" type="range" min="0.25" max="6" step="0.25" value="0.5" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Leg duration (seconds)</label>
+            <input id="legSeconds" type="number" min="0.3" max="30" step="0.1" value="3.0">
+          </div>
+          <div>
+            <label>Hold on each photo (seconds)</label>
+            <input id="holdSeconds" type="number" min="0" max="10" step="0.1" value="1.0">
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Follow map zoom</label>
+            <input id="followZoom" type="number" min="2" max="18" step="1" value="12">
+          </div>
+          <div>
+            <label>Follow update</label>
+            <select id="followMode">
+              <option value="edge" selected>only when near edge</option>
+              <option value="always">always center</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="checkRow">
+          <label title="Loop the currently loaded bird forever"><input id="loopCurrent" type="checkbox"> Loop this bird</label>
+          <label title="Auto-switch to the next bird, and loop through all birds in the folder"><input id="loopAll" type="checkbox"> Loop all birds</label>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Background music</label>
+            <select id="musicSelect">
+              <option value="off" selected>Off</option>
+              <option value="sample">Relaxing sample (free)</option>
+              <option value="upload">Upload your own</option>
+            </select>
+          </div>
+          <div>
+            <label>Volume</label>
+            <input id="musicVol" type="range" min="0" max="1" step="0.01" value="0.35" />
+          </div>
+        </div>
+
+        <div id="musicUploadRow" style="display:none; margin-top: 10px;">
+          <label>Upload audio file (mp3/ogg/wav)</label>
+          <input id="musicFile" type="file" accept="audio/*" />
+        </div>
+
+        <div class="btnrow" style="margin-top:10px;">
+          <button id="musicToggle" class="secondary tiny" type="button" disabled>Play music</button>
+        </div>
+        <div class="miniNote" id="musicAttribution"></div>
+
+        <div class="btnrow">
+          <button id="loadBtn" disabled>Load track</button>
+          <button id="playBtn" class="secondary" disabled>Play</button>
+          <button id="pauseBtn" class="secondary" disabled>Pause</button>
+          <button id="resetBtn" class="danger" disabled>Reset</button>
+        </div>
+      </div>
+
+      <div class="status" id="status">No data loaded.</div>
+    </div>
+
+    <div class="card photoCard">
+      <div class="photoStage">
+        <div class="photoTools">
+          <button id="enlargePhoto" class="secondary tiny" type="button">Enlarge photo</button>
+        </div>
+        <img id="imgA" alt="photo A" style="opacity:1;">
+        <img id="imgB" alt="photo B" style="opacity:0;">
+      </div>
+    </div>
+
+    <div class="card panel">
+      <div class="metaGrid">
+        <div><b id="metaBird">Bird: —</b></div>
+        <div class="muted" id="metaTime">Time: —</div>
+        <div class="muted" id="metaCoords">Lat/Lon: —</div>
+        <div class="muted" id="metaInfo">Photos used: —</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="photoModal" id="photoModal" aria-hidden="true">
+  <div class="inner">
+    <div class="topbar">
+      <div class="left">
+        <div class="chip" id="modalChip">Photo</div>
+      </div>
+      <div class="right">
+        <button id="hidePhoto" class="danger tiny" type="button">Hide photo (show controls)</button>
+      </div>
+    </div>
+    <div class="stage">
+      <img id="modalImgA" alt="modal photo A" style="opacity:1;">
+      <img id="modalImgB" alt="modal photo B" style="opacity:0;">
+    </div>
+  </div>
+</div>
+
+<audio id="bgAudio" preload="auto" loop></audio>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+
+<script>
+(() => {
+  const el = (id) => document.getElementById(id);
+
+  const settingsCard = el("settingsCard");
+  const toggleSettingsBtn = el("toggleSettings");
+
+  const folderInput = el("folderInput");
+  const birdSelect  = el("birdSelect");
+  const loadBtn     = el("loadBtn");
+  const playBtn     = el("playBtn");
+  const pauseBtn    = el("pauseBtn");
+  const resetBtn    = el("resetBtn");
+
+  const speedEl       = el("speed");
+  const legSecondsEl  = el("legSeconds");
+  const holdSecondsEl = el("holdSeconds");
+  const followZoomEl  = el("followZoom");
+  const followModeEl  = el("followMode");
+
+  const loopCurrentEl = el("loopCurrent");
+  const loopAllEl     = el("loopAll");
+
+  const musicSelectEl = el("musicSelect");
+  const musicVolEl    = el("musicVol");
+  const musicFileEl   = el("musicFile");
+  const musicUploadRow= el("musicUploadRow");
+  const musicToggleBtn= el("musicToggle");
+  const musicAttribEl = el("musicAttribution");
+  const bgAudio       = el("bgAudio");
+
+  const statusEl = el("status");
+
+  const imgA = el("imgA");
+  const imgB = el("imgB");
+
+  const metaBird   = el("metaBird");
+  const metaTime   = el("metaTime");
+  const metaCoords = el("metaCoords");
+  const metaInfo   = el("metaInfo");
+
+  // Photo modal
+  const enlargePhotoBtn = el("enlargePhoto");
+  const photoModal = el("photoModal");
+  const hidePhotoBtn = el("hidePhoto");
+  const modalImgA = el("modalImgA");
+  const modalImgB = el("modalImgB");
+  const modalChip = el("modalChip");
+
+  // Collapsible settings
+  const setSettingsCollapsed = (collapsed) => {
+    settingsCard.classList.toggle("settingsCollapsed", collapsed);
+    toggleSettingsBtn.textContent = collapsed ? "Show" : "Hide";
+  };
+  toggleSettingsBtn.addEventListener("click", () => {
+    const collapsed = settingsCard.classList.contains("settingsCollapsed");
+    setSettingsCollapsed(!collapsed);
+    refreshMapSizes();
+  });
+
+  // Photo modal behavior
+  const openPhoto = () => {
+    modalImgA.src = imgA.src || "";
+    modalImgB.src = imgB.src || "";
+    modalImgA.style.opacity = imgA.style.opacity || "1";
+    modalImgB.style.opacity = imgB.style.opacity || "0";
+    modalChip.textContent = `${metaBird.textContent} • ${metaTime.textContent}`;
+    photoModal.classList.add("open");
+    photoModal.setAttribute("aria-hidden", "false");
+    setSettingsCollapsed(true);
+  };
+  const closePhoto = () => {
+    photoModal.classList.remove("open");
+    photoModal.setAttribute("aria-hidden", "true");
+    setSettingsCollapsed(false);
+  };
+  enlargePhotoBtn.addEventListener("click", openPhoto);
+  hidePhotoBtn.addEventListener("click", closePhoto);
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && photoModal.classList.contains("open")) closePhoto();
+  });
+  photoModal.addEventListener("click", (e) => {
+    if (e.target === photoModal) closePhoto();
+  });
+
+  // Mutually exclusive loop toggles
+  loopAllEl.addEventListener("change", () => { if (loopAllEl.checked) loopCurrentEl.checked = false; });
+  loopCurrentEl.addEventListener("change", () => { if (loopCurrentEl.checked) loopAllEl.checked = false; });
+
+  // Music module
+  let musicUploadURL = null;
+  const SAMPLE_MP3 = "https://upload.wikimedia.org/wikipedia/commons/transcoded/e/e8/Kevin_MacLeod_-_02_-_Meditation_Impromptu_02.ogg/Kevin_MacLeod_-_02_-_Meditation_Impromptu_02.ogg.mp3";
+  const SAMPLE_OGG = "https://upload.wikimedia.org/wikipedia/commons/e/e8/Kevin_MacLeod_-_02_-_Meditation_Impromptu_02.ogg";
+
+  const setMusicToggleLabel = () => {
+    musicToggleBtn.textContent = bgAudio.paused ? "Play music" : "Pause music";
+  };
+
+  const stopMusic = () => {
+    try { bgAudio.pause(); } catch(e) {}
+    bgAudio.currentTime = 0;
+    setMusicToggleLabel();
+  };
+
+  const revokeMusicUpload = () => {
+    if (musicUploadURL) {
+      try { URL.revokeObjectURL(musicUploadURL); } catch(e) {}
+      musicUploadURL = null;
+    }
+  };
+
+  const configureMusic = () => {
+    revokeMusicUpload();
+    stopMusic();
+
+    const mode = musicSelectEl.value;
+    bgAudio.volume = Math.max(0, Math.min(1, parseFloat(musicVolEl.value || "0.35")));
+    bgAudio.loop = true;
+
+    if (mode === "off") {
+      musicUploadRow.style.display = "none";
+      musicToggleBtn.disabled = true;
+      musicAttribEl.textContent = "";
+      bgAudio.removeAttribute("src");
+      bgAudio.load();
+      return;
+    }
+
+    if (mode === "sample") {
+      musicUploadRow.style.display = "none";
+      musicToggleBtn.disabled = false;
+      bgAudio.src = SAMPLE_MP3;
+      bgAudio.onerror = () => { bgAudio.src = SAMPLE_OGG; bgAudio.load(); };
+      bgAudio.load();
+      musicAttribEl.textContent =
+        "Sample: “Meditation Impromptu 02” — Kevin MacLeod. Licensed CC BY 3.0 (attribution required).";
+      return;
+    }
+
+    if (mode === "upload") {
+      musicUploadRow.style.display = "block";
+      const f = (musicFileEl && musicFileEl.files && musicFileEl.files[0]) ? musicFileEl.files[0] : null;
+      if (!f) {
+        musicToggleBtn.disabled = true;
+        musicAttribEl.textContent = "Upload an audio file to enable music.";
+        bgAudio.removeAttribute("src");
+        bgAudio.load();
+        return;
+      }
+      musicUploadURL = URL.createObjectURL(f);
+      bgAudio.src = musicUploadURL;
+      bgAudio.load();
+      musicToggleBtn.disabled = false;
+      musicAttribEl.textContent = `Local file: ${f.name}`;
+      return;
+    }
+  };
+
+  musicVolEl.addEventListener("input", () => {
+    bgAudio.volume = Math.max(0, Math.min(1, parseFloat(musicVolEl.value || "0.35")));
+  });
+  musicSelectEl.addEventListener("change", configureMusic);
+  if (musicFileEl) musicFileEl.addEventListener("change", configureMusic);
+
+  musicToggleBtn.addEventListener("click", async () => {
+    try {
+      if (bgAudio.paused) await bgAudio.play();
+      else bgAudio.pause();
+    } catch(e) {}
+    setMusicToggleLabel();
+  });
+
+  const tryStartMusic = async () => {
+    if (musicSelectEl.value === "off") return;
+    if (!bgAudio.src) return;
+    try {
+      if (bgAudio.paused) await bgAudio.play();
+    } catch(e) {}
+    setMusicToggleLabel();
+  };
+
+  configureMusic();
+
+  // Maps
+  const followMap   = L.map('mapFollow',   { zoomControl: true, worldCopyJump: true }).setView([20, 0], 2);
+  const overviewMap = L.map('mapOverview', { zoomControl: false, worldCopyJump: true, attributionControl: false }).setView([20, 0], 2);
+
+  const tileOpts = { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' };
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', tileOpts).addTo(followMap);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', tileOpts).addTo(overviewMap);
+
+  const overviewLine = L.polyline([], { weight: 3, opacity: 0.85 }).addTo(overviewMap);
+  const overviewMarker = L.circleMarker([0,0], { radius: 6, weight: 2, fillOpacity: 0.9 }).addTo(overviewMap);
+
+  const followLine = L.polyline([], { weight: 4, opacity: 0.90 }).addTo(followMap);
+  const followMarker = L.circleMarker([0,0], { radius: 7, weight: 2, fillOpacity: 0.9 }).addTo(followMap);
+
+  const groupedFiles = new Map();
+  const trackCache = new Map();
+
+  let track = [];
+  let birdId = null;
+
+  let playing = false;
+  let rafId = null;
+  let segIndex = 0;
+  let segT = 0;
+  let lastTs = null;
+
+  let followFixed = [];
+  let lastFollowMove = 0;
+
+  const cleanupObjectURLs = () => {
+    for (const p of track) if (p.url) URL.revokeObjectURL(p.url);
+  };
+
+  const setStatus = (msg) => { statusEl.textContent = msg; };
+
+  const parseBirdId = (filename) => (filename.split("_")[0] || null);
+
+  const parseDatetimeFromFilename = (filename) => {
+    const base = filename.replace(/\s*\(\d+\)\./, ".");
+    const parts = base.split("_");
+    if (parts.length < 3) return null;
+
+    const d = parts[1] || "";
+    const t = parts[2] || "";
+    if (!/^\d{8}$/.test(d) || !/^\d{6}$/.test(t)) return null;
+
+    const year = +d.slice(0,4);
+    const mon  = +d.slice(4,6) - 1;
+    const day  = +d.slice(6,8);
+    const hh   = +t.slice(0,2);
+    const mm   = +t.slice(2,4);
+    const ss   = +t.slice(4,6);
+    const dt = new Date(Date.UTC(year, mon, day, hh, mm, ss));
+    return isNaN(dt.getTime()) ? null : dt;
+  };
+
+  const fmtTime = (d) => {
+    if (!d) return "—";
+    const pad = (x) => String(x).padStart(2,"0");
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  };
+
+  const lerp = (a,b,t) => a + (b-a)*t;
+  const lerpLonShortest = (lon1, lon2, t) => {
+    let d = lon2 - lon1;
+    if (d > 180) d -= 360;
+    if (d < -180) d += 360;
+    let lon = lon1 + d * t;
+    lon = ((lon + 180) % 360 + 360) % 360 - 180;
+    return lon;
+  };
+
+  const ensureLibs = () => {
+    return (window.L && window.exifr);
+  };
+
+  const clearMaps = () => {
+    overviewLine.setLatLngs([]);
+    followLine.setLatLngs([]);
+    overviewMarker.setLatLng([0,0]);
+    followMarker.setLatLng([0,0]);
+    followFixed = [];
+  };
+
+  const refreshMapSizes = () => {
+    requestAnimationFrame(() => {
+      try { followMap.invalidateSize(); } catch(e) {}
+      try { overviewMap.invalidateSize(); } catch(e) {}
+    });
+  };
+  window.addEventListener("resize", refreshMapSizes);
+  setTimeout(refreshMapSizes, 100);
+
+  const stopAnim = () => {
+    playing = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = null;
+    lastTs = null;
+  };
+
+  const idsSorted = () => Array.from(groupedFiles.keys()).sort();
+
+  folderInput.addEventListener("change", () => {
+    groupedFiles.clear();
+    trackCache.clear();
+
+    cleanupObjectURLs();
+    track = [];
+    birdId = null;
+    segIndex = 0; segT = 0;
+    clearMaps();
+
+    imgA.removeAttribute("src");
+    imgB.removeAttribute("src");
+    modalImgA.removeAttribute("src");
+    modalImgB.removeAttribute("src");
+
+    metaBird.textContent = "Bird: —";
+    metaTime.textContent = "Time: —";
+    metaCoords.textContent = "Lat/Lon: —";
+    metaInfo.textContent = "Photos used: —";
+
+    const files = Array.from(folderInput.files || []);
+    const jpgs = files.filter(f => /\.(jpe?g)$/i.test(f.name));
+
+    if (!jpgs.length) {
+      birdSelect.innerHTML = `<option value="">—</option>`;
+      birdSelect.disabled = true;
+      loadBtn.disabled = true;
+      setStatus("No JPG files selected.");
+      return;
+    }
+
+    for (const file of jpgs) {
+      const id = parseBirdId(file.name);
+      if (!id) continue;
+      const dt = parseDatetimeFromFilename(file.name);
+      if (!groupedFiles.has(id)) groupedFiles.set(id, []);
+      groupedFiles.get(id).push({ file, name: file.name, dt });
+    }
+
+    for (const [id, arr] of groupedFiles.entries()) {
+      arr.sort((a,b) => {
+        const ta = a.dt ? a.dt.getTime() : Infinity;
+        const tb = b.dt ? b.dt.getTime() : Infinity;
+        if (ta !== tb) return ta - tb;
+        return a.name.localeCompare(b.name);
+      });
+    }
+
+    const ids = idsSorted();
+    birdSelect.innerHTML = `<option value="">— select —</option>` + ids.map(id => {
+      const n = groupedFiles.get(id).length;
+      return `<option value="${id}">${id} (${n} files)</option>`;
+    }).join("");
+    birdSelect.disabled = false;
+    loadBtn.disabled = true;
+    playBtn.disabled = true;
+    pauseBtn.disabled = true;
+    resetBtn.disabled = true;
+
+    setStatus(
+      `Selected folder contains:\n` +
+      `- JPG files: ${jpgs.length}\n` +
+      `- Individuals detected: ${ids.length}\n\n` +
+      `Pick an individual to load the track (EXIF GPS will be read only for that bird).`
+    );
+    refreshMapSizes();
+  });
+
+  birdSelect.addEventListener("change", async () => {
+    const id = birdSelect.value;
+    if (id) {
+      await loadTrackFor(id, {autoplay: false});
+    }
+  });
+
+  const setLoadingUI = (loading) => {
+    loadBtn.disabled = loading || !birdSelect.value;
+    playBtn.disabled = true;
+    pauseBtn.disabled = true;
+    resetBtn.disabled = loading ? true : (track.length === 0);
+  };
+
+  const activateTrack = (points) => {
+    cleanupObjectURLs();
+    track = points.map(p => ({...p, url: URL.createObjectURL(p.file)}));
+  };
+
+  const loadTrackFor = async (id, {autoplay=false} = {}) => {
+    if (!ensureLibs()) {
+      setStatus("Leaflet or exifr failed to load. Check internet connection and refresh.");
+      return;
+    }
+    if (!id || !groupedFiles.has(id)) return;
+
+    stopAnim();
+    setLoadingUI(true);
+
+    birdId = id;
+    metaBird.textContent = `Bird: ${birdId}`;
+    clearMaps();
+
+    if (trackCache.has(id)) {
+      const cached = trackCache.get(id);
+      activateTrack(cached);
+      metaInfo.textContent = `Photos used: ${track.length}`;
+      setStatus(`Loaded bird ${id} from cache.\nUsable geotagged photos: ${track.length}`);
+    } else {
+      const files = groupedFiles.get(id);
+      const tmp = [];
+      setStatus(`Reading EXIF GPS for ${id}… (0 / ${files.length})`);
+
+      for (let i=0; i<files.length; i++) {
+        const { file, name, dt } = files[i];
+        try {
+          const gps = await window.exifr.gps(file);
+          if (gps && typeof gps.latitude === "number" && typeof gps.longitude === "number") {
+            tmp.push({ file, name, dt: dt || null, lat: gps.latitude, lon: gps.longitude });
+          }
+        } catch (e) {}
+        if ((i % 8) === 0 || i === files.length - 1) {
+          setStatus(`Reading EXIF GPS for ${id}… (${i+1} / ${files.length})\nKept points: ${tmp.length}`);
+        }
+      }
+
+      tmp.sort((a,b) => {
+        const ta = a.dt ? a.dt.getTime() : Infinity;
+        const tb = b.dt ? b.dt.getTime() : Infinity;
+        if (ta !== tb) return ta - tb;
+        return a.name.localeCompare(b.name);
+      });
+
+      trackCache.set(id, tmp);
+      activateTrack(tmp);
+
+      metaInfo.textContent = `Photos used: ${track.length}`;
+      setStatus(`Loaded bird ${id}.\nUsable geotagged photos: ${track.length}`);
+    }
+
+    if (birdSelect.value !== id) birdSelect.value = id;
+
+    if (track.length < 1) {
+      playBtn.disabled = true;
+      pauseBtn.disabled = true;
+      resetBtn.disabled = false;
+      setStatus(`Loaded bird ${id}.\nUsable geotagged photos: 0\n\nNo photos with EXIF GPS found for this bird.`);
+      setLoadingUI(false);
+      return;
+    }
+
+    const start = [track[0].lat, track[0].lon];
+    const latlngs = track.map(p => [p.lat, p.lon]);
+
+    overviewLine.setLatLngs(latlngs);
+    overviewMarker.setLatLng(start);
+    if (track.length >= 2) overviewMap.fitBounds(latlngs, { padding: [12,12] });
+    else overviewMap.setView(start, 3);
+
+    const z = Math.max(2, Math.min(18, parseInt(followZoomEl.value||"12",10)));
+    followMarker.setLatLng(start);
+    followFixed = [start];
+    followLine.setLatLngs([start]);
+    followMap.setView(start, z);
+
+    imgA.src = track[0].url;
+    imgB.src = (track[1] ? track[1].url : "");
+    imgA.style.opacity = 1;
+    imgB.style.opacity = 0;
+
+    segIndex = 0;
+    segT = -1;
+    lastTs = null;
+    lastFollowMove = 0;
+
+    metaCoords.textContent = `Lat/Lon: ${track[0].lat.toFixed(5)}, ${track[0].lon.toFixed(5)}`;
+    metaTime.textContent = `Time: ${fmtTime(track[0].dt)}`;
+
+    resetBtn.disabled = false;
+    playBtn.disabled = (track.length < 2);
+    pauseBtn.disabled = true;
+    setLoadingUI(false);
+
+    refreshMapSizes();
+
+    if (autoplay && track.length >= 2) startPlayback();
+  };
+
+  loadBtn.addEventListener("click", async () => {
+    const id = birdSelect.value;
+    await loadTrackFor(id, {autoplay:false});
+  });
+
+  const startPlayback = async () => {
+    if (!track || track.length < 2) return;
+    playing = true;
+    playBtn.disabled = true;
+    pauseBtn.disabled = false;
+    await tryStartMusic();
+    rafId = requestAnimationFrame(tick);
+  };
+
+  playBtn.addEventListener("click", startPlayback);
+
+  pauseBtn.addEventListener("click", () => {
+    stopAnim();
+    playBtn.disabled = false;
+    pauseBtn.disabled = true;
+  });
+
+  const restartCurrentBird = () => {
+    segIndex = 0;
+    segT = -1;
+    lastTs = null;
+    lastFollowMove = 0;
+
+    const start = [track[0].lat, track[0].lon];
+    overviewMarker.setLatLng(start);
+    followMarker.setLatLng(start);
+
+    followFixed = [start];
+    followLine.setLatLngs([start]);
+
+    imgA.src = track[0].url;
+    imgB.src = track[1] ? track[1].url : "";
+    imgA.style.opacity = 1;
+    imgB.style.opacity = 0;
+
+    metaCoords.textContent = `Lat/Lon: ${track[0].lat.toFixed(5)}, ${track[0].lon.toFixed(5)}`;
+    metaTime.textContent = `Time: ${fmtTime(track[0].dt)}`;
+
+    const z = Math.max(2, Math.min(18, parseInt(followZoomEl.value||"12",10)));
+    followMap.setView(start, z, {animate:false});
+  };
+
+  resetBtn.addEventListener("click", () => {
+    stopAnim();
+    if (!track.length) return;
+    restartCurrentBird();
+    playBtn.disabled = (track.length < 2);
+    pauseBtn.disabled = true;
+  });
+
+  const maybeMoveFollowMap = (lat, lon, ts) => {
+    const z = Math.max(2, Math.min(18, parseInt(followZoomEl.value||"12",10)));
+    const mode = followModeEl.value || "edge";
+    const minIntervalMs = 160;
+    if (ts - lastFollowMove < minIntervalMs) return;
+
+    if (mode === "always") {
+      followMap.setView([lat, lon], z, { animate: false });
+      lastFollowMove = ts;
+      return;
+    }
+
+    const padded = followMap.getBounds().pad(-0.25);
+    if (!padded.contains([lat, lon])) {
+      followMap.setView([lat, lon], z, { animate: false });
+      lastFollowMove = ts;
+    }
+  };
+
+  const advanceToNextBirdAndPlay = async () => {
+    const ids = idsSorted();
+    if (!ids.length) return;
+
+    let idx = ids.indexOf(birdId);
+    if (idx < 0) idx = 0;
+    const nextId = ids[(idx + 1) % ids.length];
+
+    setStatus(`Finished ${birdId}. Switching to ${nextId}…`);
+    await loadTrackFor(nextId, {autoplay:true});
+  };
+
+  const tick = (ts) => {
+    if (!playing) return;
+
+    if (lastTs == null) lastTs = ts;
+    const dtMs = ts - lastTs;
+    lastTs = ts;
+
+    const speed = parseFloat(speedEl.value || "1");
+    const legSeconds = Math.max(0.1, parseFloat(legSecondsEl.value || "2.0"));
+    const holdSeconds = Math.max(0.0, parseFloat(holdSecondsEl.value || "0.4"));
+
+    if (segT < 0) {
+      if (holdSeconds <= 0.0001) segT = 0;
+      else {
+        segT += (dtMs/1000) * speed / holdSeconds;
+        if (segT >= 0) segT = 0;
+      }
+      renderFrame(segIndex, 0, ts);
+      rafId = requestAnimationFrame(tick);
+      return;
+    }
+
+    segT += (dtMs/1000) * speed / legSeconds;
+
+    if (segT >= 1) {
+      renderFrame(segIndex, 1, ts);
+
+      const end = track[segIndex+1];
+      followFixed.push([end.lat, end.lon]);
+      followLine.setLatLngs(followFixed);
+
+      segIndex += 1;
+      segT = -1;
+
+      if (segIndex >= track.length - 1) {
+        if (loopAllEl.checked) {
+          stopAnim();
+          playBtn.disabled = true;
+          pauseBtn.disabled = true;
+          advanceToNextBirdAndPlay();
+          return;
+        }
+        if (loopCurrentEl.checked) {
+          setStatus(`Looping ${birdId}…`);
+          restartCurrentBird();
+          rafId = requestAnimationFrame(tick);
+          return;
+        }
+
+        stopAnim();
+        playBtn.disabled = false;
+        pauseBtn.disabled = true;
+        setStatus(`Finished animation for ${birdId}.`);
+        return;
+      }
+
+      imgA.src = track[segIndex].url;
+      imgB.src = track[segIndex+1].url;
+      imgA.style.opacity = 1;
+      imgB.style.opacity = 0;
+
+      rafId = requestAnimationFrame(tick);
+      return;
+    }
+
+    renderFrame(segIndex, segT, ts);
+    rafId = requestAnimationFrame(tick);
+  };
+
+  const syncModalPhotos = () => {
+    if (!photoModal.classList.contains("open")) return;
+    if (modalImgA.src !== imgA.src) modalImgA.src = imgA.src || "";
+    if (modalImgB.src !== imgB.src) modalImgB.src = imgB.src || "";
+    modalImgA.style.opacity = imgA.style.opacity || "1";
+    modalImgB.style.opacity = imgB.style.opacity || "0";
+    modalChip.textContent = `${metaBird.textContent} • ${metaTime.textContent}`;
+  };
+
+  const renderFrame = (i, t, ts) => {
+    const a = track[i];
+    const b = track[i+1] || track[i];
+
+    const lat = lerp(a.lat, b.lat, t);
+    const lon = lerpLonShortest(a.lon, b.lon, t);
+
+    overviewMarker.setLatLng([lat, lon]);
+    followMarker.setLatLng([lat, lon]);
+
+    followLine.setLatLngs(followFixed.concat([[lat, lon]]));
+
+    maybeMoveFollowMap(lat, lon, ts);
+
+    imgA.style.opacity = (1 - t).toFixed(3);
+    imgB.style.opacity = (t).toFixed(3);
+
+    let curTime = null;
+    if (a.dt && b.dt) {
+      const ta = a.dt.getTime();
+      const tb = b.dt.getTime();
+      curTime = new Date(ta + (tb - ta) * t);
+    } else if (a.dt) curTime = a.dt;
+
+    metaCoords.textContent = `Lat/Lon: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+    metaTime.textContent = `Time: ${fmtTime(curTime)}`;
+
+    syncModalPhotos();
+  };
+
+  if (!ensureLibs()) setStatus("Waiting for libraries… If this stays, check your internet connection.");
+  else setStatus("Select a folder with stork JPGs to begin.");
+})();
+</script>
+</body>
+</html>

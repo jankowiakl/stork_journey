@@ -415,13 +415,13 @@
   </div>
 
   <div class="side">
-    <div class="card panel settings" id="settingsCard">
+    <div class="card panel settings settingsCollapsed" id="settingsCard">
       <div class="panelHeader">
         <div class="panelHeaderLeft">
           <span class="title">Settings</span>
           <span class="subtitle">choose files, bird, playback, loop, music</span>
         </div>
-        <button id="toggleSettings" class="secondary tiny" type="button">Hide</button>
+        <button id="toggleSettings" class="secondary tiny" type="button">Show</button>
       </div>
 
       <div class="settingsBody" id="settingsBody">
@@ -487,7 +487,7 @@
 
         <div class="checkRow">
           <label title="Loop the currently loaded bird forever"><input id="loopCurrent" type="checkbox"> Loop this bird</label>
-          <label title="Auto-switch to the next bird, and loop through all birds in the folder"><input id="loopAll" type="checkbox"> Loop all birds</label>
+          <label title="Auto-switch to the next bird, and loop through all birds in the folder"><input id="loopAll" type="checkbox" checked> Loop all birds</label>
         </div>
 
         <div class="row">
@@ -1010,6 +1010,28 @@
     loadLocalFiles();
   });
 
+  const preloadTrack = async (id) => {
+    if (trackCache.has(id)) return;
+    const files = groupedFiles.get(id);
+    const tmp = [];
+    for (let i=0; i<files.length; i++) {
+      const { file, name, dt } = files[i];
+      try {
+        const gps = await window.exifr.gps(file);
+        if (gps && typeof gps.latitude === "number" && typeof gps.longitude === "number") {
+          tmp.push({ file, name, dt: dt || null, lat: gps.latitude, lon: gps.longitude });
+        }
+      } catch (e) {}
+    }
+    tmp.sort((a,b) => {
+      const ta = a.dt ? a.dt.getTime() : Infinity;
+      const tb = b.dt ? b.dt.getTime() : Infinity;
+      if (ta !== tb) return ta - tb;
+      return a.name.localeCompare(b.name);
+    });
+    trackCache.set(id, tmp);
+  };
+
   const loadGithubFiles = async () => {
     groupedFiles.clear();
     trackCache.clear();
@@ -1075,6 +1097,14 @@
         `Pick an individual to load the track (EXIF GPS will be read from remote images).`
       );
       refreshMapSizes();
+
+      if (ids.length > 0) {
+        const firstId = ids[0];
+        birdSelect.value = firstId;
+        await preloadTrack(firstId);
+        await loadTrackFor(firstId, {autoplay: true});
+        ids.slice(1).forEach(preloadTrack);
+      }
     } catch (err) {
       setStatus("Failed to load from GitHub: " + err.message);
     }
@@ -1088,7 +1118,7 @@
   birdSelect.addEventListener("change", async () => {
     const id = birdSelect.value;
     if (id) {
-      await loadTrackFor(id, {autoplay: false});
+      await loadTrackFor(id, {autoplay: true});
     }
   });
 

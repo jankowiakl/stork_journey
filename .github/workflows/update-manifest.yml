@@ -1,0 +1,42 @@
+name: Update media_data manifest
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "media_data/**"
+      - "make_manifest.py"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Generate manifest
+        run: |
+          python3 make_manifest.py
+
+      - name: Commit manifest if changed
+        run: |
+          if git status --porcelain | grep -q "media_data/manifest.json"; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add media_data/manifest.json
+            git commit -m "Auto-update media_data/manifest.json"
+            git push
+          else
+            echo "No changes to commit."
+          fi

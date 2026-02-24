@@ -415,13 +415,13 @@
   </div>
 
   <div class="side">
-    <div class="card panel settings settingsCollapsed" id="settingsCard">
+    <div class="card panel settings" id="settingsCard">
       <div class="panelHeader">
         <div class="panelHeaderLeft">
           <span class="title">Settings</span>
           <span class="subtitle">choose files, bird, playback, loop, music</span>
         </div>
-        <button id="toggleSettings" class="secondary tiny" type="button">Show</button>
+        <button id="toggleSettings" class="secondary tiny" type="button">Hide</button>
       </div>
 
       <div class="settingsBody" id="settingsBody">
@@ -487,7 +487,7 @@
 
         <div class="checkRow">
           <label title="Loop the currently loaded bird forever"><input id="loopCurrent" type="checkbox"> Loop this bird</label>
-          <label title="Auto-switch to the next bird, and loop through all birds in the folder"><input id="loopAll" type="checkbox" checked> Loop all birds</label>
+          <label title="Auto-switch to the next bird, and loop through all birds in the folder"><input id="loopAll" type="checkbox"> Loop all birds</label>
         </div>
 
         <div class="row">
@@ -864,6 +864,8 @@
   let lastFollowMove = 0;
 
   let currentProgress = 0;
+
+  let userInteracted = false;
 
   const cleanupObjectURLs = () => {
     for (const p of track) if (p.url) URL.revokeObjectURL(p.url);
@@ -1313,10 +1315,11 @@
   });
 
   const maybeMoveFollowMap = (lat, lon, ts) => {
-    const z = Math.max(2, Math.min(18, parseInt(followZoomEl.value||"12",10)));
-    const mode = followModeEl.value || "edge";
     const minIntervalMs = 160;
     if (ts - lastFollowMove < minIntervalMs) return;
+
+    const mode = followModeEl.value || "edge";
+    const z = userInteracted ? followMap.getZoom() : Math.max(2, Math.min(18, parseInt(followZoomEl.value||"12",10)));
 
     if (mode === "always") {
       followMap.setView([lat, lon], z, { animate: false });
@@ -1330,6 +1333,8 @@
       lastFollowMove = ts;
     }
   };
+
+  followMap.on('zoomstart dragstart', () => { userInteracted = true; });
 
   const advanceToNextBirdAndPlay = async () => {
     const ids = idsSorted();

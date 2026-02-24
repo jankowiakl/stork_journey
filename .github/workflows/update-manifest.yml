@@ -2,7 +2,7 @@ name: Update media_data manifest
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
     paths:
       - "media_data/**"
       - "make_manifest.py"

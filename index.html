@@ -361,6 +361,10 @@
         </div>
 
         <input id="folderInput" type="file" multiple webkitdirectory directory />
+        <label style="margin-top:10px;">Load local photos (any browser)</label>
+        <input id="filesInput" type="file" multiple accept="image/*" />
+        <div class="miniNote">Tip: if folder selection doesn't work in your browser, select multiple images at once (Ctrl/Shift).</div>
+
 
         <div class="row">
           <div>
@@ -527,6 +531,34 @@
 (() => {
   const el = (id) => document.getElementById(id);
 
+  // --- Hosting sanity check ---
+  // This app must be served via HTTP(S) (GitHub Pages / local server). Viewing it on github.com
+  // or raw.githubusercontent.com will NOT run it as a web app.
+  const warnIfWrongHost = () => {
+    const host = location.hostname || "";
+    const proto = location.protocol || "";
+    if (host === "github.com" || host === "raw.githubusercontent.com") {
+      setStatus(
+        "You're viewing the source on GitHub, not running the app.\n\n" +
+        "Enable GitHub Pages: repo Settings → Pages → Deploy from branch (main / root).\n" +
+        "Then open: https://"+ DEFAULT_OWNER +".github.io/"+ DEFAULT_REPO +"/"
+      );
+      return true;
+    }
+    if (proto === "file:") {
+      setStatus(
+        "You're opening index.html directly from disk (file://).\n" +
+        "Auto-loading from ./media_data may fail in some browsers due to security limits.\n\n" +
+        "Recommended: run a local server in the repo folder:\n" +
+        "  python -m http.server 8000\n" +
+        "then open http://localhost:8000/\n\n" +
+        "Local photo loading still works via the file picker."
+      );
+      return true;
+    }
+    return false;
+  };
+
   // -----------------------------
   // UI refs
   // -----------------------------
@@ -538,6 +570,7 @@
   const clearBtn = el("clearBtn");
 
   const folderInput = el("folderInput");
+  const filesInput = el("filesInput");
   const basemapSelectEl = el("basemapSelect");
   const followZoomEl  = el("followZoom");
   const followModeEl  = el("followMode");
@@ -1266,6 +1299,19 @@
     if (!id) return;
     await loadTrackFor(id, { autoplay:false });
   });
+  filesInput.addEventListener("change", async () => {
+    const files = Array.from(filesInput.files || []);
+    if (!files.length) return;
+    const items = files.map(f => ({ source:"file", file:f, name:f.name }));
+    const ok = buildGroupsFromItems(items, "local files");
+    if (!ok) return;
+    const ids = idsSorted();
+    if (ids.length) {
+      birdSelect.value = ids[0];
+      await loadTrackFor(ids[0], { autoplay:true });
+    }
+  });
+
 
   // -----------------------------
   // Loading: GitHub repo media_data/
@@ -1281,20 +1327,27 @@
     const url = new URL(`./${DEFAULT_DIR}/manifest.json`, location.href);
     url.searchParams.set("v", String(Date.now()));
     const res = await fetch(url.toString(), { cache: "no-store" });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!Array.isArray(data)) return null;
+    if (!res.ok) return { ok:false, reason:"not_found" };
+
+    const text = await res.text();
+    if (!text || !text.trim()) return { ok:false, reason:"empty" };
+
+    let data = null;
+    try { data = JSON.parse(text); }
+    catch (e) { return { ok:false, reason:"invalid_json", error: String(e) }; }
+
+    if (!Array.isArray(data)) return { ok:false, reason:"not_array" };
 
     const items = [];
     for (const entry of data) {
       const p = (typeof entry === "string") ? entry : (entry && entry.path ? entry.path : null);
       if (!p) continue;
       if (!p.startsWith(`${DEFAULT_DIR}/`)) continue;
-      if (!/\\.(jpe?g)$/i.test(p)) continue;
+      if (!/\.(jpe?g|png|webp)$/i.test(p)) continue;
       const u = new URL(p, location.href).toString();
       items.push({ source:"url", url:u, name: p.split("/").pop() });
     }
-    return items.length ? items : null;
+    return items.length ? { ok:true, items } : { ok:false, reason:"no_items" };
   };
 
   const loadFromGitHubTree = async () => {
@@ -1330,9 +1383,9 @@
 
     // A) local manifest (best: no rate limit, same-origin)
     try {
-      const manifestItems = await tryLoadManifest();
-      if (manifestItems) {
-        const ok = buildGroupsFromItems(manifestItems, `./${DEFAULT_DIR}/manifest.json`);
+      const man = await tryLoadManifest();
+      if (man && man.ok && man.items) {
+        const ok = buildGroupsFromItems(man.items, `./${DEFAULT_DIR}/manifest.json`);
         if (!ok) return;
         const ids = idsSorted();
         if (ids.length) {
@@ -1340,6 +1393,11 @@
           await loadTrackFor(ids[0], { autoplay });
         }
         return;
+      } else if (man && !man.ok) {
+        // If the manifest exists but is empty/invalid, tell the user and fall back.
+        if (man.reason !== "not_found") {
+          setStatus(`manifest.json problem (${man.reason}) — falling back to GitHub API…`);
+        }
       }
     } catch(e) {}
 

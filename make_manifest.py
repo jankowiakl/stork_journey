@@ -1,14 +1,29 @@
 #!/usr/bin/env python3
+"""Generate media_data/manifest.json for the stork_journey viewer.
+
+Usage (from repo root):
+  python3 make_manifest.py
+  python3 make_manifest.py --dir media_data --out media_data/manifest.json
+
+The manifest is a JSON array of relative POSIX paths, e.g.:
+[
+  "media_data/AB12_2024-05-01_120000.jpg",
+  ...
+]
+"""
+
 import argparse
 import json
 from pathlib import Path
 
-DEFAULT_EXTS = {".jpg", ".jpeg", ".png", ".webp"}  # allowed media extensions
+DEFAULT_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
+
 
 def to_posix(rel_path: Path) -> str:
     return rel_path.as_posix()
 
-def main():
+
+def main() -> None:
     ap = argparse.ArgumentParser(description="Generate media_data/manifest.json for GitHub Pages.")
     ap.add_argument("--dir", default="media_data", help="Directory with media files (default: media_data)")
     ap.add_argument("--out", default=None, help="Output manifest path (default: <dir>/manifest.json)")
@@ -22,12 +37,11 @@ def main():
         raise SystemExit(f"ERROR: Directory not found: {base_dir}")
 
     out_path = Path(args.out) if args.out else (base_dir / "manifest.json")
-
     exts = set(e.lower() for e in (args.ext if args.ext else list(DEFAULT_EXTS)))
 
     repo_root = Path.cwd().resolve()
+    paths: list[str] = []
 
-    paths = []
     it = base_dir.rglob("*") if args.recursive else base_dir.glob("*")
     for p in it:
         if not p.is_file():
@@ -36,16 +50,14 @@ def main():
             continue
         if p.suffix.lower() not in exts:
             continue
-
         rel = p.resolve().relative_to(repo_root)
         paths.append(to_posix(rel))
 
     paths = sorted(set(paths))
-
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(paths, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-
     print(f"OK: wrote {len(paths)} entries -> {out_path}")
+
 
 if __name__ == "__main__":
     main()

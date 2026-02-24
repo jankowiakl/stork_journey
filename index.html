@@ -48,14 +48,16 @@
     }
 
     .card {
-      background: radial-gradient(1200px 800px at 30% -20%, rgba(119,209,255,0.12), transparent 55%),
-                  linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      background: radial-gradient(1200px 800px at 30% -20%, rgba(119,209,255,0.10), transparent 55%),
+                  linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
       border: 1px solid var(--border);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
       overflow: hidden;
       min-height: 0;
       position: relative;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
     }
 
     .mapStack { height: 100%; min-height: 0; }
@@ -71,7 +73,7 @@
       overflow: hidden;
       border: 1px solid rgba(255,255,255,0.18);
       box-shadow: 0 18px 40px rgba(0,0,0,0.45);
-      background: rgba(0,0,0,0.25);
+      background: rgba(0,0,0,0.18);
       z-index: 650;
     }
     #mapOverview { width: 100%; height: 100%; }
@@ -80,7 +82,7 @@
       position: absolute;
       left: 12px;
       top: 12px;
-      z-index: 700;
+      z-index: 1500;
       padding: 6px 10px;
       border-radius: 999px;
       border: 1px solid var(--border);
@@ -91,6 +93,25 @@
       pointer-events: none;
     }
     .badge.overview { left: auto; right: 18px; top: 18px; }
+
+    .timeBadge{
+      position: absolute;
+      /* Safe-area aware so it stays visible on phones with notches / home indicator */
+      left: calc(12px + env(safe-area-inset-left));
+      bottom: calc(12px + env(safe-area-inset-bottom));
+      /* Above Leaflet controls (which often use z-index ~1000) */
+      z-index: 1200;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.35);
+      backdrop-filter: blur(8px);
+      font-size: 12px;
+      color: var(--text);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
 
     .side {
       position: relative;
@@ -130,7 +151,7 @@
     select, input[type="range"], input[type="number"] {
       width: 100%;
       box-sizing: border-box;
-      background: rgba(0,0,0,0.25);
+      background: rgba(0,0,0,0.18);
       border: 1px solid var(--border);
       border-radius: 12px;
       color: var(--text);
@@ -257,7 +278,7 @@
       position: absolute; inset: 0;
       width: 100%; height: 100%;
       object-fit: contain;
-      background: rgba(0,0,0,0.25);
+      background: rgba(0,0,0,0.18);
       transition: opacity 80ms linear;
     }
 
@@ -376,7 +397,7 @@
       left: 0;
       right: 0;
       padding: 12px;
-      background: rgba(0,0,0,0.4);
+      background: rgba(0,0,0,0.28);
       opacity: 0;
       transition: opacity 0.2s ease-in-out;
       z-index: 10;
@@ -392,20 +413,187 @@
       padding: 0;
     }
 
+
+    /* Slider row: play/pause button next to the time slider */
+    #sliderOverlay .sliderRow{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #sliderOverlay .sliderRow input[type="range"]{
+      flex: 1;
+      min-width: 0;
+    }
+/* --- Responsive: single-column mobile layout (map on top, photo + meta below) --- */
+@media (max-width: 980px) {
+  header { padding: 12px 14px; }
+  header h1 { font-size: 15px; }
+
+  .wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+    height: auto;
+    min-height: calc(100dvh - 62px);
+    overflow: auto;
+  }
+
+  /* Map takes the top portion */
+  .mapStack { height: 26dvh; min-height: 160px; }
+
+  /* Smaller inset overview on mobile (doesn't cover the follow map) */
+  .overviewInset {
+    right: 10px;
+    bottom: 10px;
+    top: auto;
+    width: min(36vw, 180px);
+    height: 95px;
+  }
+  .overviewInset .badge.overview{
+    right: 8px;
+    top: 8px;
+    padding: 3px 6px;
+    font-size: 9px;
+  }
+
+  /* Side becomes a vertical stack; reorder: photo -> meta -> settings */
+  .side {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-right: 0;
+  }
+  .photoCard { order: 1; height: 50dvh; min-height: 45dvh; }
+    /* Mobile: no need for the "Enlarge photo" button */
+  #enlargePhoto { display: none !important; }
+.metaCard  { order: 2; }
+  #settingsCard { order: 3; }
+
+  /* Make big numbers slightly smaller so they don't dominate */
+  #metaTime, #metaCoords { font-size: 18px; }
+}
+
+/* Touch devices: slider overlay should be visible (no hover) */
+@media (hover: none) {
+  #sliderOverlay { opacity: 1; }
+  .photoStage:hover #sliderOverlay { opacity: 1; }
+}
+
+
+/* --- Mobile full-screen mode: map + photo fullscreen, with a slide-up details panel --- */
+#mobilePanelBtn{
+  position: fixed;
+  right: 12px;
+  top: calc(12px + env(safe-area-inset-top));
+  z-index: 9100;
+  display: none;
+}
+#mobilePanel{
+  position: fixed;
+  inset: 0;
+  z-index: 9050;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding: calc(14px + env(safe-area-inset-top)) 10px 16px;
+  box-sizing: border-box;
+  background: rgba(0,0,0,0);
+  transition: background 0.25s ease;
+  pointer-events: none; /* important: don't block map when panel is closed */
+}
+#mobilePanel .panelShell{
+  width: min(720px, 100%);
+  max-height: 78dvh;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 30px 70px rgba(0,0,0,0.55);
+  transform: translateY(-110%);
+  transition: transform 0.25s ease;
+  display: flex;
+  flex-direction: column;
+}
+#mobilePanel .panelTopbar{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+#mobilePanel .panelTopbar .title{
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.2px;
+}
+#mobilePanel .panelBody{
+  overflow: auto;
+  padding: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+/* Only on mobile: lock page to map+photo (full screen) */
+@media (max-width: 980px) {
+  body.mobileLock { overflow: hidden; }
+  body.mobileLock header { display: none; }
+  body.mobileLock .wrap{
+    padding: 0;
+    gap: 0;
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+  }
+  body.mobileLock .card { border-radius: 0; }
+  body.mobileLock .mapStack { height: 50dvh; min-height: 0; }
+  body.mobileLock .photoCard { height: 50dvh; min-height: 0; }
+
+  /* Hide meta/settings in the main layout (they will live inside the panel) */
+  body.mobileLock .metaCard,
+  body.mobileLock #settingsCard { display: none; }
+
+  /* Mobile: hide the map credits/attribution bar entirely */
+  body.mobileLock .leaflet-control-attribution,
+  body.mobileLock .leaflet-control-scale { display: none !important; }
+
+  /* Floating button + slide-up panel */
+  body.mobileLock #mobilePanelBtn { display: inline-flex; }
+  body.mobileLock #mobilePanel { display: flex; }
+
+  body.mobileLock.mobilePanelOpen #mobilePanel{ background: rgba(0,0,0,0.45); pointer-events: auto; }
+  body.mobileLock.mobilePanelOpen #mobilePanel .panelShell{ transform: translateY(0); }
+
+  /* When the panel is open, show the moved cards inside it */
+  body.mobileLock.mobilePanelOpen #mobilePanel .metaCard,
+  body.mobileLock.mobilePanelOpen #mobilePanel #settingsCard { display: block; }
+
+  /* Mobile: make map credits (Leaflet attribution) smaller so it doesn't cover content */
+  .leaflet-control-attribution{
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+    padding: 1px 4px !important;
+    border-radius: 8px !important;
+    max-width: 70vw;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+
   </style>
 </head>
 
 <body>
-<header>
-  <div>
-    <h1>White Stork Photo Flight Viewer</h1>
-    <p class="hint">Main map follows the bird; the inset (top-right) shows the full journey. Loop playback and add relaxing music in Settings.</p>
-  </div>
 </header>
 
 <div class="wrap">
   <div class="card mapStack">
-    <div class="badge">Follow (zoomed)</div>
+    <div class="timeBadge" id="mapTimeBadge">—</div>
     <div id="mapFollow"></div>
 
     <div class="overviewInset">
@@ -495,7 +683,13 @@
             <label>Background music</label>
             <select id="musicSelect">
               <option value="off" selected>Off</option>
-              <option value="sample">Relaxing sample (free)</option>
+              <option value="sample2">Relaxing sample 1 (piano)</option>
+              <option value="sample1">Relaxing sample 2 (piano)</option>
+              <option value="sample3">Relaxing sample 3 (piano)</option>
+              <option value="somafm_drone">SomaFM — Drone Zone (live ambient)</option>
+              <option value="somafm_spacestation">SomaFM — Space Station Soma (live ambient)</option>
+              <option value="somafm_synphaera">SomaFM — Synphaera (live ambient/space)</option>
+              <option value="random_somafm">Random live station (SomaFM)</option>
               <option value="upload">Upload your own</option>
             </select>
           </div>
@@ -534,12 +728,15 @@
         <img id="imgA" alt="photo A" style="opacity:1;">
         <img id="imgB" alt="photo B" style="opacity:0;">
         <div id="sliderOverlay" style="display:none;">
-          <input id="timeSlider" type="range" min="0" max="1" step="0.01" value="0" />
+          <div class="sliderRow">
+            <button id="sliderPlayPause" class="secondary tiny" type="button" disabled>Play</button>
+            <input id="timeSlider" type="range" min="0" max="1" step="0.01" value="0" />
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="card panel">
+    <div class="card panel metaCard">
       <div class="metaGrid">
         <div><b id="metaBird">Bird: —</b></div>
         <div class="muted" id="metaTime">Time: —</div>
@@ -547,6 +744,18 @@
         <div class="muted" id="metaInfo">Photos used: —</div>
       </div>
     </div>
+  </div>
+</div>
+
+<button id="mobilePanelBtn" class="secondary tiny" type="button" aria-label="Show details and settings">Details</button>
+
+<div id="mobilePanel" aria-hidden="true">
+  <div class="panelShell" role="dialog" aria-modal="true" aria-label="Details and settings">
+    <div class="panelTopbar">
+      <span class="title">Details &amp; settings</span>
+      <button id="closeMobilePanel" class="secondary tiny" type="button">Close</button>
+    </div>
+    <div class="panelBody" id="mobilePanelBody"></div>
   </div>
 </div>
 
@@ -614,6 +823,8 @@
   const metaCoords = el("metaCoords");
   const metaInfo   = el("metaInfo");
 
+  const mapTimeBadge = el("mapTimeBadge");
+
   // Photo modal
   const enlargePhotoBtn = el("enlargePhoto");
   const photoModal = el("photoModal");
@@ -629,7 +840,86 @@
   const sliderOverlay = el("sliderOverlay");
   const timeSlider = el("timeSlider");
 
+  const sliderPlayPauseBtn = el("sliderPlayPause");
+  const syncSliderPlayPause = () => {
+    if (!sliderPlayPauseBtn) return;
+    // Disable only when playback is unavailable (same as both main buttons disabled)
+    sliderPlayPauseBtn.disabled = !!(playBtn.disabled && pauseBtn.disabled);
+    sliderPlayPauseBtn.textContent = playing ? "Pause" : "Play";
+  };
+
   const basemapSelect = el("basemapSelect");
+
+    // Mobile full-screen mode (map+photo). Keep fullscreen on mobile and use a slide-up panel for details/settings.
+  const mobileMQ = window.matchMedia("(max-width: 980px)");
+  const isMobile = () => mobileMQ.matches;
+
+  const mobilePanelBtn = el("mobilePanelBtn");
+  const mobilePanel = el("mobilePanel");
+  const mobilePanelBody = el("mobilePanelBody");
+  const closeMobilePanelBtn = el("closeMobilePanel");
+
+  const metaCardEl = document.querySelector(".metaCard");
+
+  // Remember original positions so we can restore when switching back to desktop layout
+  const origSettings = { parent: settingsCard.parentNode, next: settingsCard.nextSibling };
+  const origMeta = metaCardEl ? { parent: metaCardEl.parentNode, next: metaCardEl.nextSibling } : null;
+
+  const openMobilePanel = () => {
+    document.body.classList.add("mobilePanelOpen");
+    if (mobilePanel) mobilePanel.setAttribute("aria-hidden","false");
+    // Let layout settle, then fix Leaflet sizes
+    setTimeout(() => { try { refreshMapSizes(); } catch(e) {} }, 60);
+  };
+  const closeMobilePanel = () => {
+    document.body.classList.remove("mobilePanelOpen");
+    if (mobilePanel) mobilePanel.setAttribute("aria-hidden","true");
+    setTimeout(() => { try { refreshMapSizes(); } catch(e) {} }, 60);
+  };
+  const toggleMobilePanel = () => {
+    if (document.body.classList.contains("mobilePanelOpen")) closeMobilePanel();
+    else openMobilePanel();
+  };
+
+  const moveCardsIntoMobilePanel = () => {
+    if (!mobilePanelBody) return;
+    if (metaCardEl && metaCardEl.parentNode !== mobilePanelBody) mobilePanelBody.appendChild(metaCardEl);
+    if (settingsCard && settingsCard.parentNode !== mobilePanelBody) mobilePanelBody.appendChild(settingsCard);
+  };
+
+  const restoreCardsFromMobilePanel = () => {
+    if (origMeta && origMeta.parent && metaCardEl && metaCardEl.parentNode !== origMeta.parent) {
+      origMeta.parent.insertBefore(metaCardEl, origMeta.next);
+    }
+    if (origSettings.parent && settingsCard && settingsCard.parentNode !== origSettings.parent) {
+      origSettings.parent.insertBefore(settingsCard, origSettings.next);
+    }
+  };
+
+  const applyMobileMode = () => {
+    if (isMobile()) {
+      // Always start in the fullscreen split view (map+photo). Map stays interactive.
+      document.body.classList.add("mobileLock");
+      moveCardsIntoMobilePanel();
+      closeMobilePanel();
+    } else {
+      document.body.classList.remove("mobileLock");
+      closeMobilePanel();
+      restoreCardsFromMobilePanel();
+    }
+    setTimeout(() => { try { refreshMapSizes(); } catch(e) {} }, 80);
+  };
+
+  applyMobileMode();
+  if (mobileMQ && mobileMQ.addEventListener) mobileMQ.addEventListener("change", applyMobileMode);
+
+  if (mobilePanelBtn) mobilePanelBtn.addEventListener("click", toggleMobilePanel);
+  if (closeMobilePanelBtn) closeMobilePanelBtn.addEventListener("click", closeMobilePanel);
+  if (mobilePanel) mobilePanel.addEventListener("click", (e) => { if (e.target === mobilePanel) closeMobilePanel(); });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMobilePanel();
+  });
 
   // Collapsible settings
   const setSettingsCollapsed = (collapsed) => {
@@ -682,8 +972,49 @@ loopCurrentEl.checked = false;
 
   // Music module
   let musicUploadURL = null;
-  const SAMPLE_MP3 = "https://upload.wikimedia.org/wikipedia/commons/transcoded/e/e8/Kevin_MacLeod_-_02_-_Meditation_Impromptu_02.ogg/Kevin_MacLeod_-_02_-_Meditation_Impromptu_02.ogg.mp3";
-  const SAMPLE_OGG = "https://upload.wikimedia.org/wikipedia/commons/e/e8/Kevin_MacLeod_-_02_-_Meditation_Impromptu_02.ogg";
+
+  // Local "samples" (CC BY 3.0) hosted on Wikimedia Commons
+  const SAMPLES = {
+    sample2: {
+      primary: "https://upload.wikimedia.org/wikipedia/commons/transcoded/e/e8/Kevin_MacLeod_-_02_-_Meditation_Impromptu_02.ogg/Kevin_MacLeod_-_02_-_Meditation_Impromptu_02.ogg.mp3",
+      fallback: "https://upload.wikimedia.org/wikipedia/commons/e/e8/Kevin_MacLeod_-_02_-_Meditation_Impromptu_02.ogg",
+      attribution: "Sample: “Meditation Impromptu 02” — Kevin MacLeod. Licensed CC BY 3.0 (attribution required)."
+    },
+    sample1: {
+      primary: "https://upload.wikimedia.org/wikipedia/commons/transcoded/6/67/Kevin_MacLeod_-_01_-_Meditation_Impromptu_01.ogg/Kevin_MacLeod_-_01_-_Meditation_Impromptu_01.ogg.mp3",
+      fallback: "https://upload.wikimedia.org/wikipedia/commons/6/67/Kevin_MacLeod_-_01_-_Meditation_Impromptu_01.ogg",
+      attribution: "Sample: “Meditation Impromptu 01” — Kevin MacLeod. Licensed CC BY 3.0 (attribution required)."
+    },
+    sample3: {
+      primary: "https://upload.wikimedia.org/wikipedia/commons/transcoded/1/17/Kevin_MacLeod_-_03_-_Meditation_Impromptu_03.ogg/Kevin_MacLeod_-_03_-_Meditation_Impromptu_03.ogg.mp3",
+      fallback: "https://upload.wikimedia.org/wikipedia/commons/1/17/Kevin_MacLeod_-_03_-_Meditation_Impromptu_03.ogg",
+      attribution: "Sample: “Meditation Impromptu 03” — Kevin MacLeod. Licensed CC BY 3.0 (attribution required)."
+    }
+  };
+
+  // Live relaxing stations (SomaFM direct server links)
+  // NOTE: SomaFM states these direct links are for individual/personal use only.
+  const STREAMS = {
+    somafm_drone: {
+      primary: "https://ice3.somafm.com/dronezone-128-mp3",
+      fallback: "https://ice5.somafm.com/dronezone-128-mp3",
+      attribution: "Stream: SomaFM — Drone Zone (live ambient). (Direct server link; personal use per SomaFM.)"
+    },
+    somafm_spacestation: {
+      primary: "https://ice3.somafm.com/spacestation-128-mp3",
+      fallback: "https://ice5.somafm.com/spacestation-128-mp3",
+      attribution: "Stream: SomaFM — Space Station Soma (live ambient). (Direct server link; personal use per SomaFM.)"
+    },
+    somafm_synphaera: {
+      primary: "https://ice3.somafm.com/synphaera-128-mp3",
+      fallback: "https://ice5.somafm.com/synphaera-128-mp3",
+      attribution: "Stream: SomaFM — Synphaera (live ambient/space). (Direct server link; personal use per SomaFM.)"
+    }
+  };
+
+  const RANDOM_SOMAFM_POOL = ["somafm_drone", "somafm_spacestation", "somafm_synphaera"];
+
+  const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
   const setMusicToggleLabel = () => {
     musicToggleBtn.textContent = bgAudio.paused ? "Play music" : "Pause music";
@@ -691,7 +1022,7 @@ loopCurrentEl.checked = false;
 
   const stopMusic = () => {
     try { bgAudio.pause(); } catch(e) {}
-    bgAudio.currentTime = 0;
+    try { bgAudio.currentTime = 0; } catch(e) {}
     setMusicToggleLabel();
   };
 
@@ -702,7 +1033,20 @@ loopCurrentEl.checked = false;
     }
   };
 
+  const setAudioSource = (primary, fallback) => {
+    bgAudio.onerror = null;
+    bgAudio.src = primary || "";
+    bgAudio.onerror = () => {
+      if (fallback && bgAudio.src !== fallback) {
+        bgAudio.src = fallback;
+        try { bgAudio.load(); } catch(e) {}
+      }
+    };
+    try { bgAudio.load(); } catch(e) {}
+  };
+
   const configureMusic = () => {
+    // Clean up anything previously loaded
     revokeMusicUpload();
     stopMusic();
 
@@ -710,23 +1054,14 @@ loopCurrentEl.checked = false;
     bgAudio.volume = Math.max(0, Math.min(1, parseFloat(musicVolEl.value || "0.35")));
     bgAudio.loop = true;
 
-    if (mode === "off") {
-      musicUploadRow.style.display = "none";
-      musicToggleBtn.disabled = true;
-      musicAttribEl.textContent = "";
-      bgAudio.removeAttribute("src");
-      bgAudio.load();
-      return;
-    }
+    // Default UI
+    musicUploadRow.style.display = "none";
+    musicAttribEl.textContent = "";
 
-    if (mode === "sample") {
-      musicUploadRow.style.display = "none";
-      musicToggleBtn.disabled = false;
-      bgAudio.src = SAMPLE_MP3;
-      bgAudio.onerror = () => { bgAudio.src = SAMPLE_OGG; bgAudio.load(); };
-      bgAudio.load();
-      musicAttribEl.textContent =
-        "Sample: “Meditation Impromptu 02” — Kevin MacLeod. Licensed CC BY 3.0 (attribution required).";
+    if (mode === "off") {
+      musicToggleBtn.disabled = true;
+      bgAudio.removeAttribute("src");
+      try { bgAudio.load(); } catch(e) {}
       return;
     }
 
@@ -737,16 +1072,41 @@ loopCurrentEl.checked = false;
         musicToggleBtn.disabled = true;
         musicAttribEl.textContent = "Upload an audio file to enable music.";
         bgAudio.removeAttribute("src");
-        bgAudio.load();
+        try { bgAudio.load(); } catch(e) {}
         return;
       }
       musicUploadURL = URL.createObjectURL(f);
-      bgAudio.src = musicUploadURL;
-      bgAudio.load();
+      setAudioSource(musicUploadURL, null);
       musicToggleBtn.disabled = false;
       musicAttribEl.textContent = `Local file: ${f.name}`;
       return;
     }
+
+    let resolvedMode = mode;
+    if (mode === "random_somafm") resolvedMode = pickRandom(RANDOM_SOMAFM_POOL);
+
+    // Samples
+    if (SAMPLES[resolvedMode]) {
+      const s = SAMPLES[resolvedMode];
+      musicToggleBtn.disabled = false;
+      setAudioSource(s.primary, s.fallback);
+      musicAttribEl.textContent = s.attribution;
+      return;
+    }
+
+    // Streams
+    if (STREAMS[resolvedMode]) {
+      const st = STREAMS[resolvedMode];
+      musicToggleBtn.disabled = false;
+      setAudioSource(st.primary, st.fallback);
+      musicAttribEl.textContent = st.attribution;
+      return;
+    }
+
+    // Fallback
+    musicToggleBtn.disabled = true;
+    bgAudio.removeAttribute("src");
+    try { bgAudio.load(); } catch(e) {}
   };
 
   musicVolEl.addEventListener("input", () => {
@@ -776,6 +1136,8 @@ loopCurrentEl.checked = false;
 
   // Maps
   const followMap   = L.map('mapFollow',   { zoomControl: true, worldCopyJump: true }).setView([20, 0], 2);
+  // Shorten credits bar (remove Leaflet prefix)
+  try { followMap.attributionControl.setPrefix(''); } catch(e) {}
   const overviewMap = L.map('mapOverview', { zoomControl: false, worldCopyJump: true, attributionControl: false }).setView([20, 0], 2);
 
   const baseDefs = {
@@ -991,6 +1353,7 @@ loopCurrentEl.checked = false;
     playBtn.disabled = true;
     pauseBtn.disabled = true;
     resetBtn.disabled = true;
+    syncSliderPlayPause();
 
     setStatus(
       `Selected folder contains:\n` +
@@ -1018,6 +1381,7 @@ loopCurrentEl.checked = false;
 
     metaBird.textContent = "Bird: —";
     metaTime.textContent = "Time: —";
+    if (mapTimeBadge) mapTimeBadge.textContent = "—";
     metaCoords.textContent = "Lat/Lon: —";
     metaInfo.textContent = "Photos used: —";
 
@@ -1063,6 +1427,7 @@ loopCurrentEl.checked = false;
 
     metaBird.textContent = "Bird: —";
     metaTime.textContent = "Time: —";
+    if (mapTimeBadge) mapTimeBadge.textContent = "—";
     metaCoords.textContent = "Lat/Lon: —";
     metaInfo.textContent = "Photos used: —";
 
@@ -1103,6 +1468,7 @@ loopCurrentEl.checked = false;
       playBtn.disabled = true;
       pauseBtn.disabled = true;
       resetBtn.disabled = true;
+    syncSliderPlayPause();
 
       setStatus(
         `Loaded from GitHub repo:\n` +
@@ -1141,6 +1507,7 @@ loopCurrentEl.checked = false;
     playBtn.disabled = true;
     pauseBtn.disabled = true;
     resetBtn.disabled = loading ? true : (track.length === 0);
+    syncSliderPlayPause();
   };
 
   const activateTrack = (points) => {
@@ -1219,6 +1586,7 @@ loopCurrentEl.checked = false;
       resetBtn.disabled = false;
       setStatus(`Loaded bird ${id}.\nUsable geotagged photos: 0\n\nNo photos with EXIF GPS found for this bird.`);
       setLoadingUI(false);
+      syncSliderPlayPause();
       sliderOverlay.style.display = "none";
       return;
     }
@@ -1250,11 +1618,13 @@ loopCurrentEl.checked = false;
 
     metaCoords.textContent = `Lat/Lon: ${track[0].lat.toFixed(5)}, ${track[0].lon.toFixed(5)}`;
     metaTime.textContent = `Time: ${fmtTime(track[0].dt)}`;
+    if (mapTimeBadge) mapTimeBadge.textContent = fmtTime(track[0].dt);
 
     resetBtn.disabled = false;
     playBtn.disabled = (track.length < 2);
     pauseBtn.disabled = true;
     setLoadingUI(false);
+    syncSliderPlayPause();
 
     if (track.length >= 2) {
       sliderOverlay.style.display = "block";
@@ -1279,6 +1649,7 @@ loopCurrentEl.checked = false;
     playing = true;
     playBtn.disabled = true;
     pauseBtn.disabled = false;
+    syncSliderPlayPause();
     await tryStartMusic();
     rafId = requestAnimationFrame(tick);
   };
@@ -1289,6 +1660,21 @@ loopCurrentEl.checked = false;
     stopAnim();
     playBtn.disabled = false;
     pauseBtn.disabled = true;
+    syncSliderPlayPause();
+  });
+
+  syncSliderPlayPause();
+
+  if (sliderPlayPauseBtn) sliderPlayPauseBtn.addEventListener("click", async () => {
+    if (playing) {
+      stopAnim();
+      playBtn.disabled = false;
+      pauseBtn.disabled = true;
+      syncSliderPlayPause();
+      return;
+    }
+    await startPlayback();
+    syncSliderPlayPause();
   });
 
   const restartCurrentBird = () => {
@@ -1313,6 +1699,7 @@ loopCurrentEl.checked = false;
 
     metaCoords.textContent = `Lat/Lon: ${track[0].lat.toFixed(5)}, ${track[0].lon.toFixed(5)}`;
     metaTime.textContent = `Time: ${fmtTime(track[0].dt)}`;
+    if (mapTimeBadge) mapTimeBadge.textContent = fmtTime(track[0].dt);
 
     const z = Math.max(2, Math.min(18, parseInt(followZoomEl.value||"12",10)));
     followMap.setView(start, z, {animate:false});
@@ -1324,6 +1711,7 @@ loopCurrentEl.checked = false;
     restartCurrentBird();
     playBtn.disabled = (track.length < 2);
     pauseBtn.disabled = true;
+    syncSliderPlayPause();
   });
 
   const maybeMoveFollowMap = (lat, lon, ts) => {
@@ -1402,6 +1790,7 @@ loopCurrentEl.checked = false;
           stopAnim();
           playBtn.disabled = true;
           pauseBtn.disabled = true;
+          syncSliderPlayPause();
           advanceToNextBirdAndPlay();
           return;
         }
@@ -1415,6 +1804,7 @@ loopCurrentEl.checked = false;
         stopAnim();
         playBtn.disabled = false;
         pauseBtn.disabled = true;
+        syncSliderPlayPause();
         setStatus(`Finished animation for ${birdId}.`);
         return;
       }
@@ -1467,6 +1857,7 @@ loopCurrentEl.checked = false;
 
     metaCoords.textContent = `Lat/Lon: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
     metaTime.textContent = `Time: ${fmtTime(curTime)}`;
+    if (mapTimeBadge) mapTimeBadge.textContent = fmtTime(curTime);
 
     syncModalPhotos();
   };
@@ -1478,6 +1869,7 @@ loopCurrentEl.checked = false;
     stopAnim();
     playBtn.disabled = false;
     pauseBtn.disabled = true;
+    syncSliderPlayPause();
 
     const s = parseFloat(timeSlider.value);
     const hold = Math.max(0, parseFloat(holdSecondsEl.value || "1.0"));
@@ -1524,6 +1916,7 @@ loopCurrentEl.checked = false;
     } else if (a.dt) curTime = a.dt;
 
     metaTime.textContent = `Time: ${fmtTime(curTime)}`;
+    if (mapTimeBadge) mapTimeBadge.textContent = fmtTime(curTime);
     metaCoords.textContent = `Lat/Lon: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
 
     syncModalPhotos();

@@ -415,13 +415,13 @@
   </div>
 
   <div class="side">
-    <div class="card panel settings" id="settingsCard">
+    <div class="card panel settings settingsCollapsed" id="settingsCard">
       <div class="panelHeader">
         <div class="panelHeaderLeft">
           <span class="title">Settings</span>
           <span class="subtitle">choose files, bird, playback, loop, music</span>
         </div>
-        <button id="toggleSettings" class="secondary tiny" type="button">Hide</button>
+        <button id="toggleSettings" class="secondary tiny" type="button">Show</button>
       </div>
 
       <div class="settingsBody" id="settingsBody">
@@ -487,7 +487,7 @@
 
         <div class="checkRow">
           <label title="Loop the currently loaded bird forever"><input id="loopCurrent" type="checkbox"> Loop this bird</label>
-          <label title="Auto-switch to the next bird, and loop through all birds in the folder"><input id="loopAll" type="checkbox"> Loop all birds</label>
+          <label title="Auto-switch to the next bird, and loop through all birds in the folder"><input id="loopAll" type="checkbox" checked> Loop all birds</label>
         </div>
 
         <div class="row">
@@ -622,6 +622,9 @@
   const modalImgB = el("modalImgB");
   const modalChip = el("modalChip");
 
+  // Remember settings panel state when toggling the photo modal
+  let prevSettingsCollapsed = false;
+
   // Time slider
   const sliderOverlay = el("sliderOverlay");
   const timeSlider = el("timeSlider");
@@ -639,6 +642,14 @@
     refreshMapSizes();
   });
 
+// Default UI state (requested):
+// - Settings panel collapsed by default
+// - Loop all birds enabled by default
+setSettingsCollapsed(true);
+loopAllEl.checked = true;
+loopCurrentEl.checked = false;
+
+
   // Photo modal behavior
   const openPhoto = () => {
     modalImgA.src = imgA.src || "";
@@ -648,12 +659,13 @@
     modalChip.textContent = `${metaBird.textContent} • ${metaTime.textContent}`;
     photoModal.classList.add("open");
     photoModal.setAttribute("aria-hidden", "false");
+    prevSettingsCollapsed = settingsCard.classList.contains("settingsCollapsed");
     setSettingsCollapsed(true);
   };
   const closePhoto = () => {
     photoModal.classList.remove("open");
     photoModal.setAttribute("aria-hidden", "true");
-    setSettingsCollapsed(false);
+    setSettingsCollapsed(prevSettingsCollapsed);
   };
   enlargePhotoBtn.addEventListener("click", openPhoto);
   hidePhotoBtn.addEventListener("click", closePhoto);

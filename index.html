@@ -668,7 +668,8 @@
               <option value="cartoVoy">CARTO Voyager (color)</option>
               <option value="opentopo">OpenTopoMap</option>
               <option value="plOrtho">PL Ortho (Geoportal)</option>
-              <option value="esriImagery" selected>Esri World Imagery</option>
+              <option value="esriImageryLabels" selected>Esri Imagery + Labels</option>
+              <option value="esriImagery">Esri World Imagery (no labels)</option>
             </select>
           </div>
         </div>
@@ -1140,6 +1141,19 @@ loopCurrentEl.checked = false;
   try { followMap.attributionControl.setPrefix(''); } catch(e) {}
   const overviewMap = L.map('mapOverview', { zoomControl: false, worldCopyJump: true, attributionControl: false }).setView([20, 0], 2);
 
+  // Helper: make sure each map has a labels pane (so place-name tiles sit above imagery)
+  const ensureLabelsPane = (map) => {
+    const paneName = "labelsPane";
+    if (!map.getPane(paneName)) {
+      map.createPane(paneName);
+      const p = map.getPane(paneName);
+      p.style.zIndex = 650;          // above base tiles, below most UI
+      p.style.pointerEvents = "none"; // never block map interactions
+    }
+    return paneName;
+  };
+
+
   const baseDefs = {
     osmStd: {
       label: "OSM Standard (local labels)",
@@ -1193,28 +1207,53 @@ loopCurrentEl.checked = false;
         maxZoom: 19,
         attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
       }
+    },
+
+    esriImageryLabels: {
+      label: "Esri Imagery + Labels",
+      kind: "group",
+      baseUrl: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      labelsUrl: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+      baseOpts: {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+      },
+      labelsOpts: {
+        maxZoom: 19,
+        opacity: 0.95
+      }
     }
   };
 
   let followBase = null;
   let overviewBase = null;
 
-  const createBaseLayer = (key) => {
-    const def = baseDefs[key] || baseDefs.esriImagery;
+  const createBaseLayer = (key, map) => {
+    const def = baseDefs[key] || baseDefs.esriImageryLabels || baseDefs.esriImagery;
+
     if (def.kind === "wms") return L.tileLayer.wms(def.url, def.opts);
+
+    if (def.kind === "group") {
+      const paneName = ensureLabelsPane(map);
+      const base = L.tileLayer(def.baseUrl, def.baseOpts);
+      const labelsOpts = Object.assign({}, def.labelsOpts || {}, { pane: paneName });
+      const labels = L.tileLayer(def.labelsUrl, labelsOpts);
+      return L.layerGroup([base, labels]);
+    }
+
     return L.tileLayer(def.url, def.opts);
   };
 
   const applyBasemap = (key) => {
     try { if (followBase) followMap.removeLayer(followBase); } catch(e) {}
     try { if (overviewBase) overviewMap.removeLayer(overviewBase); } catch(e) {}
-    followBase = createBaseLayer(key).addTo(followMap);
-    overviewBase = createBaseLayer(key).addTo(overviewMap);
+    followBase = createBaseLayer(key, followMap).addTo(followMap);
+    overviewBase = createBaseLayer(key, overviewMap).addTo(overviewMap);
   };
 
   basemapSelect.addEventListener("change", () => applyBasemap(basemapSelect.value));
 
-  applyBasemap("esriImagery");
+  applyBasemap(basemapSelect.value || "esriImageryLabels");
 
   const overviewLine = L.polyline([], { weight: 3, opacity: 0.85 }).addTo(overviewMap);
   const overviewMarker = L.circleMarker([0,0], { radius: 6, weight: 2, fillOpacity: 0.9 }).addTo(overviewMap);

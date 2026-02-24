@@ -1147,7 +1147,7 @@ loopCurrentEl.checked = false;
     if (!map.getPane(paneName)) {
       map.createPane(paneName);
       const p = map.getPane(paneName);
-      p.style.zIndex = 650;          // above base tiles, below most UI
+      p.style.zIndex = 390;          // above base tiles, below vector overlays (track/markers)
       p.style.pointerEvents = "none"; // never block map interactions
     }
     return paneName;

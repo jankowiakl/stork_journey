@@ -95,7 +95,7 @@
     .side {
       position: relative;
       display: grid;
-      grid-template-rows: auto minmax(0, 1fr) auto;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
       gap: 14px;
       min-height: 0;
       overflow: hidden;
@@ -111,17 +111,8 @@
       gap: 10px;
       margin-bottom: 10px;
     }
-    .panelHeader .title {
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.2px;
-    }
-    .panelHeader .subtitle {
-      font-size: 12px;
-      color: var(--muted);
-      margin-left: 10px;
-      font-weight: 500;
-    }
+    .panelHeader .title { font-size: 13px; font-weight: 700; letter-spacing: 0.2px; }
+    .panelHeader .subtitle { font-size: 12px; color: var(--muted); margin-left: 10px; font-weight: 500; }
     .panelHeaderLeft { display: flex; align-items: baseline; flex-wrap: wrap; }
 
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
@@ -170,65 +161,27 @@
       white-space: pre-wrap;
     }
 
+    /* Settings collapse ONLY hides Settings body + status; Playback stays visible */
     .settingsBody { display: block; }
     .settingsCollapsed .settingsBody { display: none; }
     .settingsCollapsed .panelHeader { margin-bottom: 0; }
-    .settingsCollapsed .status { margin-top: 8px; }
-
-    /* --- Settings overlay (so controls never get pushed under the photo) --- */
-    /* Note: Overlay removed to fix overlapping; now stacks vertically */
-    #settingsCard{
-      /* position: absolute; */ /* Removed */
-      /* left: 0; */ /* Removed */
-      /* right: 0; */ /* Removed */
-      /* top: 0; */ /* Removed */
-      /* z-index: 1200; */ /* Removed */
-      /* max-height: calc(100% - 160px); */ /* Removed */
-      padding: 14px;                 /* Match other panels */
-      font-size: 12px;
-    }
-
-    /* Scroll only the body, keep header visible */
-    #settingsCard .settingsBody{
-      max-height: 300px; /* Arbitrary max to prevent overgrowth; adjust as needed */
-      overflow: auto;
-      padding-right: 6px;
-    }
+    .settingsCollapsed .status { display: none; }
 
     /* Smaller typography & tighter spacing in Settings only */
+    #settingsCard { padding: 14px; font-size: 12px; }
+    #settingsCard .settingsBody { max-height: 300px; overflow: auto; padding-right: 6px; }
     #settingsCard label{ font-size: 11px; margin-bottom: 4px; }
     #settingsCard .panelHeader{ margin-bottom: 8px; }
     #settingsCard .panelHeader .title{ font-size: 12px; }
     #settingsCard .panelHeader .subtitle{ font-size: 11px; }
     #settingsCard .row{ gap: 8px; margin-top: 8px; }
     #settingsCard .btnrow{ gap: 8px; margin-top: 10px; }
-    #settingsCard select,
-    #settingsCard input[type="range"],
-    #settingsCard input[type="number"]{
-      padding: 8px 8px;
-      border-radius: 10px;
-      font-size: 12px;
+    #settingsCard select, #settingsCard input[type="range"], #settingsCard input[type="number"]{
+      padding: 8px 8px; border-radius: 10px; font-size: 12px;
     }
-    #settingsCard button{
-      padding: 8px 10px;
-      border-radius: 10px;
-      font-size: 12px;
-    }
-    #settingsCard button.tiny{
-      padding: 6px 8px;
-      border-radius: 9px;
-      font-size: 11px;
-    }
+    #settingsCard button{ padding: 8px 10px; border-radius: 10px; font-size: 12px; }
+    #settingsCard button.tiny{ padding: 6px 8px; border-radius: 9px; font-size: 11px; }
     #settingsCard .status{ font-size: 11px; }
-
-    /* When hidden, make it a thin bar so it doesn't cover the photo */
-    #settingsCard.settingsCollapsed{
-      max-height: 52px;
-    }
-    #settingsCard.settingsCollapsed .status{
-      display: none;
-    }
-
 
     .checkRow {
       display: flex;
@@ -261,28 +214,16 @@
       transition: opacity 80ms linear;
     }
 
-    .metaGrid { 
-      display: grid; 
-      gap: 6px; 
-      font-size: 12px; 
-      color: var(--text); 
+    .metaGrid {
+      display: grid;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text);
       text-align: center;
     }
     .metaGrid b { font-size: 13px; }
     .metaGrid .muted { color: var(--muted); }
-    #metaTime, #metaCoords {
-      font-size: 24px;
-    }
-
-    .pill {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 6px 10px; border-radius: 999px;
-      border: 1px solid var(--border); background: rgba(0,0,0,0.18);
-      margin-right: 8px;
-    }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: inline-block; }
-    .dot.ok { background: var(--ok); }
-    .dot.bad { background: var(--danger); }
+    #metaTime, #metaCoords { font-size: 24px; }
 
     .leaflet-control-attribution, .leaflet-control-scale {
       background: rgba(0,0,0,0.35) !important;
@@ -310,6 +251,11 @@
       line-height: 1.35;
     }
 
+    /* Playback card */
+    #playbackCard .row{ margin-top:8px; }
+    #timelineWrap{ margin-top:10px; }
+    #timelineTime{ font-size:12px; color:var(--muted); margin-top:6px; text-align:center; }
+
     .photoModal{
       position:fixed;
       inset:0;
@@ -328,10 +274,7 @@
       box-shadow: 0 30px 70px rgba(0,0,0,0.55);
       background: rgba(0,0,0,0.35);
     }
-    .photoModal .stage{
-      position:absolute;
-      inset:0;
-    }
+    .photoModal .stage{ position:absolute; inset:0; }
     .photoModal img{
       position:absolute;
       inset:0;
@@ -369,7 +312,6 @@
       font-size:12px;
       white-space:nowrap;
     }
-
   </style>
 </head>
 
@@ -377,7 +319,10 @@
 <header>
   <div>
     <h1>White Stork Photo Flight Viewer</h1>
-    <p class="hint">Main map follows the bird; the inset (top-right) shows the full journey. Loop playback and add relaxing music in Settings.</p>
+    <p class="hint">
+      Default: auto-load photos from this repo (<b>media_data/</b>) and loop all individuals.
+      Timeline slider is always visible (Playback panel).
+    </p>
   </div>
 </header>
 
@@ -393,48 +338,51 @@
   </div>
 
   <div class="side">
+    <!-- SETTINGS (collapsible) -->
     <div class="card panel settings" id="settingsCard">
       <div class="panelHeader">
         <div class="panelHeaderLeft">
           <span class="title">Settings</span>
-          <span class="subtitle">choose files, bird, playback, loop, music</span>
+          <span class="subtitle">data source + basemap + follow + music</span>
         </div>
         <button id="toggleSettings" class="secondary tiny" type="button">Hide</button>
       </div>
 
       <div class="settingsBody" id="settingsBody">
-        <label>1) Select folder with JPG files (Chrome/Edge recommended)</label>
+        <label>Data source (optional)</label>
+        <div class="btnrow" style="margin-top:0;">
+          <button id="reloadGitHubBtn" type="button">Reload from GitHub (media_data)</button>
+          <button id="clearBtn" class="secondary" type="button">Clear</button>
+        </div>
+
+        <div class="miniNote">
+          By default, the page tries: <b>./media_data/manifest.json</b> (if you add it) and then falls back to the GitHub API.
+          If you prefer, you can load a local folder (Chrome/Edge):
+        </div>
+
         <input id="folderInput" type="file" multiple webkitdirectory directory />
 
         <div class="row">
           <div>
-            <label>2) Individual (bird id)</label>
-            <select id="birdSelect" disabled>
-              <option value="">—</option>
+            <label>Basemap</label>
+            <select id="basemapSelect">
+              <option value="esriWorldStreet" selected>Esri World Street Map (default)</option>
+              <option value="osmStd">OSM Standard</option>
+              <option value="osmDE">OSM DE</option>
+              <option value="cartoPos">CARTO Positron</option>
+              <option value="cartoVoy">CARTO Voyager</option>
+              <option value="opentopo">OpenTopoMap</option>
+              <option value="plOrtho">PL Ortho (Geoportal)</option>
+              <option value="esriImagery">Esri World Imagery</option>
             </select>
           </div>
-          <div>
-            <label>Animation speed</label>
-            <input id="speed" type="range" min="0.25" max="6" step="0.25" value="0.5" />
-          </div>
-        </div>
-
-        <div class="row">
-          <div>
-            <label>Leg duration (seconds)</label>
-            <input id="legSeconds" type="number" min="0.3" max="30" step="0.1" value="3.0">
-          </div>
-          <div>
-            <label>Hold on each photo (seconds)</label>
-            <input id="holdSeconds" type="number" min="0" max="10" step="0.1" value="1.0">
-          </div>
-        </div>
-
-        <div class="row">
           <div>
             <label>Follow map zoom</label>
             <input id="followZoom" type="number" min="2" max="18" step="1" value="12">
           </div>
+        </div>
+
+        <div class="row">
           <div>
             <label>Follow update</label>
             <select id="followMode">
@@ -442,12 +390,16 @@
               <option value="always">always center</option>
             </select>
           </div>
+          <div>
+            <label>&nbsp;</label>
+            <div class="checkRow" style="margin-top:0;">
+              <label title="Loop current bird"><input id="loopCurrent" type="checkbox"> Loop this bird</label>
+              <label title="Loop all birds"><input id="loopAll" type="checkbox" checked> Loop all birds</label>
+            </div>
+          </div>
         </div>
 
-        <div class="checkRow">
-          <label title="Loop the currently loaded bird forever"><input id="loopCurrent" type="checkbox"> Loop this bird</label>
-          <label title="Auto-switch to the next bird, and loop through all birds in the folder"><input id="loopAll" type="checkbox"> Loop all birds</label>
-        </div>
+        <hr style="border:0;height:1px;background:rgba(255,255,255,0.08);margin:12px 0;">
 
         <div class="row">
           <div>
@@ -473,18 +425,60 @@
           <button id="musicToggle" class="secondary tiny" type="button" disabled>Play music</button>
         </div>
         <div class="miniNote" id="musicAttribution"></div>
+      </div>
 
-        <div class="btnrow">
-          <button id="loadBtn" disabled>Load track</button>
-          <button id="playBtn" class="secondary" disabled>Play</button>
-          <button id="pauseBtn" class="secondary" disabled>Pause</button>
-          <button id="resetBtn" class="danger" disabled>Reset</button>
+      <div class="status" id="status">Loading…</div>
+    </div>
+
+    <!-- PLAYBACK (always visible; includes timeline slider) -->
+    <div class="card panel" id="playbackCard">
+      <div class="panelHeader">
+        <div class="panelHeaderLeft">
+          <span class="title">Playback</span>
+          <span class="subtitle">bird + timeline + speed + play</span>
         </div>
       </div>
 
-      <div class="status" id="status">No data loaded.</div>
+      <div class="row" style="margin-top:0;">
+        <div>
+          <label>Individual (bird id)</label>
+          <select id="birdSelect" disabled>
+            <option value="">—</option>
+          </select>
+        </div>
+        <div>
+          <label>Animation speed</label>
+          <input id="speed" type="range" min="0.25" max="6" step="0.25" value="0.5" disabled />
+        </div>
+      </div>
+
+      <div class="btnrow">
+        <button id="playBtn" class="secondary" disabled type="button">Play</button>
+        <button id="pauseBtn" class="secondary" disabled type="button">Pause</button>
+        <button id="resetBtn" class="danger" disabled type="button">Reset</button>
+      </div>
+
+      <div id="timelineWrap">
+        <label>Timeline</label>
+        <input id="timeline" type="range" min="0" max="1" step="0.001" value="0" disabled />
+        <div id="timelineTime">—</div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Leg duration (seconds)</label>
+          <input id="legSeconds" type="number" min="0.3" max="30" step="0.1" value="3.0" disabled>
+        </div>
+        <div>
+          <label>Hold on each photo (seconds)</label>
+          <input id="holdSeconds" type="number" min="0" max="10" step="0.1" value="1.0" disabled>
+        </div>
+      </div>
+
+      <div class="miniNote">Tip: drag Timeline to jump. If it was playing, it continues automatically after you release.</div>
     </div>
 
+    <!-- PHOTO -->
     <div class="card photoCard">
       <div class="photoStage">
         <div class="photoTools">
@@ -495,6 +489,7 @@
       </div>
     </div>
 
+    <!-- META -->
     <div class="card panel">
       <div class="metaGrid">
         <div><b id="metaBird">Bird: —</b></div>
@@ -532,25 +527,36 @@
 (() => {
   const el = (id) => document.getElementById(id);
 
+  // -----------------------------
+  // UI refs
+  // -----------------------------
   const settingsCard = el("settingsCard");
   const toggleSettingsBtn = el("toggleSettings");
+  const statusEl = el("status");
+
+  const reloadGitHubBtn = el("reloadGitHubBtn");
+  const clearBtn = el("clearBtn");
 
   const folderInput = el("folderInput");
-  const birdSelect  = el("birdSelect");
-  const loadBtn     = el("loadBtn");
-  const playBtn     = el("playBtn");
-  const pauseBtn    = el("pauseBtn");
-  const resetBtn    = el("resetBtn");
-
-  const speedEl       = el("speed");
-  const legSecondsEl  = el("legSeconds");
-  const holdSecondsEl = el("holdSeconds");
+  const basemapSelectEl = el("basemapSelect");
   const followZoomEl  = el("followZoom");
   const followModeEl  = el("followMode");
 
   const loopCurrentEl = el("loopCurrent");
   const loopAllEl     = el("loopAll");
 
+  // Playback UI (always visible)
+  const birdSelect  = el("birdSelect");
+  const playBtn     = el("playBtn");
+  const pauseBtn    = el("pauseBtn");
+  const resetBtn    = el("resetBtn");
+  const speedEl       = el("speed");
+  const legSecondsEl  = el("legSeconds");
+  const holdSecondsEl = el("holdSeconds");
+  const timelineEl = el("timeline");
+  const timelineTimeEl = el("timelineTime");
+
+  // Music
   const musicSelectEl = el("musicSelect");
   const musicVolEl    = el("musicVol");
   const musicFileEl   = el("musicFile");
@@ -559,8 +565,7 @@
   const musicAttribEl = el("musicAttribution");
   const bgAudio       = el("bgAudio");
 
-  const statusEl = el("status");
-
+  // Photo stage
   const imgA = el("imgA");
   const imgB = el("imgB");
 
@@ -577,18 +582,27 @@
   const modalImgB = el("modalImgB");
   const modalChip = el("modalChip");
 
-  // Collapsible settings
+  const setStatus = (msg) => { statusEl.textContent = msg; };
+
+  // -----------------------------
+  // Settings collapse
+  // -----------------------------
   const setSettingsCollapsed = (collapsed) => {
     settingsCard.classList.toggle("settingsCollapsed", collapsed);
     toggleSettingsBtn.textContent = collapsed ? "Show" : "Hide";
+    refreshMapSizes();
   };
   toggleSettingsBtn.addEventListener("click", () => {
-    const collapsed = settingsCard.classList.contains("settingsCollapsed");
-    setSettingsCollapsed(!collapsed);
-    refreshMapSizes();
+    setSettingsCollapsed(!settingsCard.classList.contains("settingsCollapsed"));
   });
 
+  // Mutually exclusive loop toggles
+  loopAllEl.addEventListener("change", () => { if (loopAllEl.checked) loopCurrentEl.checked = false; });
+  loopCurrentEl.addEventListener("change", () => { if (loopCurrentEl.checked) loopAllEl.checked = false; });
+
+  // -----------------------------
   // Photo modal behavior
+  // -----------------------------
   const openPhoto = () => {
     modalImgA.src = imgA.src || "";
     modalImgB.src = imgB.src || "";
@@ -609,42 +623,26 @@
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && photoModal.classList.contains("open")) closePhoto();
   });
-  photoModal.addEventListener("click", (e) => {
-    if (e.target === photoModal) closePhoto();
-  });
+  photoModal.addEventListener("click", (e) => { if (e.target === photoModal) closePhoto(); });
 
-  // Mutually exclusive loop toggles
-  loopAllEl.addEventListener("change", () => { if (loopAllEl.checked) loopCurrentEl.checked = false; });
-  loopCurrentEl.addEventListener("change", () => { if (loopCurrentEl.checked) loopAllEl.checked = false; });
-
+  // -----------------------------
   // Music module
+  // -----------------------------
   let musicUploadURL = null;
   const SAMPLE_MP3 = "https://upload.wikimedia.org/wikipedia/commons/transcoded/e/e8/Kevin_MacLeod_-_02_-_Meditation_Impromptu_02.ogg/Kevin_MacLeod_-_02_-_Meditation_Impromptu_02.ogg.mp3";
   const SAMPLE_OGG = "https://upload.wikimedia.org/wikipedia/commons/e/e8/Kevin_MacLeod_-_02_-_Meditation_Impromptu_02.ogg";
+  const clamp01 = (x) => Math.max(0, Math.min(1, Number.isFinite(x) ? x : 0));
 
-  const setMusicToggleLabel = () => {
-    musicToggleBtn.textContent = bgAudio.paused ? "Play music" : "Pause music";
-  };
-
-  const stopMusic = () => {
-    try { bgAudio.pause(); } catch(e) {}
-    bgAudio.currentTime = 0;
-    setMusicToggleLabel();
-  };
-
+  const setMusicToggleLabel = () => { musicToggleBtn.textContent = bgAudio.paused ? "Play music" : "Pause music"; };
+  const stopMusic = () => { try { bgAudio.pause(); } catch(e) {} try { bgAudio.currentTime = 0; } catch(e) {} setMusicToggleLabel(); };
   const revokeMusicUpload = () => {
-    if (musicUploadURL) {
-      try { URL.revokeObjectURL(musicUploadURL); } catch(e) {}
-      musicUploadURL = null;
-    }
+    if (musicUploadURL) { try { URL.revokeObjectURL(musicUploadURL); } catch(e) {} musicUploadURL = null; }
   };
-
   const configureMusic = () => {
     revokeMusicUpload();
     stopMusic();
-
     const mode = musicSelectEl.value;
-    bgAudio.volume = Math.max(0, Math.min(1, parseFloat(musicVolEl.value || "0.35")));
+    bgAudio.volume = clamp01(parseFloat(musicVolEl.value || "0.35"));
     bgAudio.loop = true;
 
     if (mode === "off") {
@@ -655,7 +653,6 @@
       bgAudio.load();
       return;
     }
-
     if (mode === "sample") {
       musicUploadRow.style.display = "none";
       musicToggleBtn.disabled = false;
@@ -666,7 +663,6 @@
         "Sample: “Meditation Impromptu 02” — Kevin MacLeod. Licensed CC BY 3.0 (attribution required).";
       return;
     }
-
     if (mode === "upload") {
       musicUploadRow.style.display = "block";
       const f = (musicFileEl && musicFileEl.files && musicFileEl.files[0]) ? musicFileEl.files[0] : null;
@@ -685,39 +681,108 @@
       return;
     }
   };
-
-  musicVolEl.addEventListener("input", () => {
-    bgAudio.volume = Math.max(0, Math.min(1, parseFloat(musicVolEl.value || "0.35")));
-  });
+  musicVolEl.addEventListener("input", () => { bgAudio.volume = clamp01(parseFloat(musicVolEl.value || "0.35")); });
   musicSelectEl.addEventListener("change", configureMusic);
   if (musicFileEl) musicFileEl.addEventListener("change", configureMusic);
-
   musicToggleBtn.addEventListener("click", async () => {
-    try {
-      if (bgAudio.paused) await bgAudio.play();
-      else bgAudio.pause();
-    } catch(e) {}
+    try { if (bgAudio.paused) await bgAudio.play(); else bgAudio.pause(); } catch(e) {}
     setMusicToggleLabel();
   });
-
   const tryStartMusic = async () => {
     if (musicSelectEl.value === "off") return;
     if (!bgAudio.src) return;
-    try {
-      if (bgAudio.paused) await bgAudio.play();
-    } catch(e) {}
+    try { if (bgAudio.paused) await bgAudio.play(); } catch(e) {}
     setMusicToggleLabel();
   };
-
   configureMusic();
 
-  // Maps
+  // -----------------------------
+  // Maps + basemaps
+  // -----------------------------
   const followMap   = L.map('mapFollow',   { zoomControl: true, worldCopyJump: true }).setView([20, 0], 2);
   const overviewMap = L.map('mapOverview', { zoomControl: false, worldCopyJump: true, attributionControl: false }).setView([20, 0], 2);
 
-  const tileOpts = { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' };
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', tileOpts).addTo(followMap);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', tileOpts).addTo(overviewMap);
+  const baseDefs = {
+    esriWorldStreet: {
+      label: "Esri World Street Map",
+      kind: "tile",
+      url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+      opts: { maxZoom: 19, attribution: "Tiles © Esri — Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012" }
+    },
+    osmStd: {
+      label: "OSM Standard",
+      kind: "tile",
+      url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+      opts: { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }
+    },
+    osmDE: {
+      label: "OSM DE",
+      kind: "tile",
+      url: "https://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png",
+      opts: { maxZoom: 19, subdomains: "abc", attribution: "&copy; OpenStreetMap contributors (openstreetmap.de)" }
+    },
+    cartoPos: {
+      label: "CARTO Positron",
+      kind: "tile",
+      url: "https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png",
+      opts: { maxZoom: 19, subdomains: "abcd", attribution: "Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL." }
+    },
+    cartoVoy: {
+      label: "CARTO Voyager",
+      kind: "tile",
+      url: "https://cartodb-basemaps-{s}.global.ssl.fastly.net/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+      opts: { maxZoom: 19, subdomains: "abcd", attribution: "Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL." }
+    },
+    opentopo: {
+      label: "OpenTopoMap",
+      kind: "tile",
+      url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+      opts: { maxZoom: 17, subdomains: "abc", attribution: "Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap" }
+    },
+    plOrtho: {
+      label: "PL Ortho (Geoportal)",
+      kind: "wms",
+      url: "https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMS/HighResolution",
+      opts: {
+        layers: "Raster",
+        format: "image/jpeg",
+        transparent: false,
+        version: "1.3.0",
+        tileSize: 256,
+        maxZoom: 23,
+        attribution: "GUGiK / geoportal.gov.pl"
+      }
+    },
+    esriImagery: {
+      label: "Esri World Imagery",
+      kind: "tile",
+      url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      opts: { maxZoom: 19, attribution: "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community" }
+    }
+  };
+
+  let followBase = null;
+  let overviewBase = null;
+
+  const createBaseLayer = (key) => {
+    const def = baseDefs[key] || baseDefs.esriWorldStreet;
+    if (def.kind === "wms") return L.tileLayer.wms(def.url, def.opts);
+    return L.tileLayer(def.url, def.opts);
+  };
+
+  const applyBasemapToMaps = (key) => {
+    try { if (followBase) followMap.removeLayer(followBase); } catch(e) {}
+    try { if (overviewBase) overviewMap.removeLayer(overviewBase); } catch(e) {}
+    followBase = createBaseLayer(key).addTo(followMap);
+    overviewBase = createBaseLayer(key).addTo(overviewMap);
+  };
+
+  basemapSelectEl.addEventListener("change", () => {
+    applyBasemapToMaps(basemapSelectEl.value);
+  });
+
+  // default basemap (Esri World Street Map)
+  applyBasemapToMaps(basemapSelectEl.value || "esriWorldStreet");
 
   const overviewLine = L.polyline([], { weight: 3, opacity: 0.85 }).addTo(overviewMap);
   const overviewMarker = L.circleMarker([0,0], { radius: 6, weight: 2, fillOpacity: 0.9 }).addTo(overviewMap);
@@ -725,12 +790,26 @@
   const followLine = L.polyline([], { weight: 4, opacity: 0.90 }).addTo(followMap);
   const followMarker = L.circleMarker([0,0], { radius: 7, weight: 2, fillOpacity: 0.9 }).addTo(followMap);
 
+  const refreshMapSizes = () => {
+    requestAnimationFrame(() => {
+      try { followMap.invalidateSize(); } catch(e) {}
+      try { overviewMap.invalidateSize(); } catch(e) {}
+    });
+  };
+  window.addEventListener("resize", refreshMapSizes);
+  setTimeout(refreshMapSizes, 100);
+
+  // -----------------------------
+  // Data model
+  // -----------------------------
+  // groupedFiles: id -> [{source:"file"|"url", file?, url?, name, dt?}]
   const groupedFiles = new Map();
-  const trackCache = new Map();
+  const trackCache = new Map(); // id -> points [{name, dt, lat, lon, src, __objUrl?}]
 
   let track = [];
   let birdId = null;
 
+  // Animation state
   let playing = false;
   let rafId = null;
   let segIndex = 0;
@@ -740,22 +819,22 @@
   let followFixed = [];
   let lastFollowMove = 0;
 
-  const cleanupObjectURLs = () => {
-    for (const p of track) if (p.url) URL.revokeObjectURL(p.url);
-  };
+  // Timeline scrub state
+  let scrubActive = false;
+  let scrubWasPlaying = false;
 
-  const setStatus = (msg) => { statusEl.textContent = msg; };
+  const ensureLibs = () => (window.L && window.exifr);
 
   const parseBirdId = (filename) => (filename.split("_")[0] || null);
 
   const parseDatetimeFromFilename = (filename) => {
-    const base = filename.replace(/\s*\(\d+\)\./, ".");
+    const base = filename.replace(/\\s*\\(\\d+\\)\\./, ".");
     const parts = base.split("_");
     if (parts.length < 3) return null;
 
     const d = parts[1] || "";
     const t = parts[2] || "";
-    if (!/^\d{8}$/.test(d) || !/^\d{6}$/.test(t)) return null;
+    if (!/^\\d{8}$/.test(d) || !/^\\d{6}$/.test(t)) return null;
 
     const year = +d.slice(0,4);
     const mon  = +d.slice(4,6) - 1;
@@ -768,7 +847,7 @@
   };
 
   const fmtTime = (d) => {
-    if (!d) return "—";
+    if (!d || isNaN(d.getTime())) return "—";
     const pad = (x) => String(x).padStart(2,"0");
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
   };
@@ -783,10 +862,6 @@
     return lon;
   };
 
-  const ensureLibs = () => {
-    return (window.L && window.exifr);
-  };
-
   const clearMaps = () => {
     overviewLine.setLatLngs([]);
     followLine.setLatLngs([]);
@@ -794,15 +869,6 @@
     followMarker.setLatLng([0,0]);
     followFixed = [];
   };
-
-  const refreshMapSizes = () => {
-    requestAnimationFrame(() => {
-      try { followMap.invalidateSize(); } catch(e) {}
-      try { overviewMap.invalidateSize(); } catch(e) {}
-    });
-  };
-  window.addEventListener("resize", refreshMapSizes);
-  setTimeout(refreshMapSizes, 100);
 
   const stopAnim = () => {
     playing = false;
@@ -813,15 +879,40 @@
 
   const idsSorted = () => Array.from(groupedFiles.keys()).sort();
 
-  folderInput.addEventListener("change", () => {
+  const enablePlaybackControls = (enabled) => {
+    playBtn.disabled = !enabled;
+    pauseBtn.disabled = true;
+    resetBtn.disabled = !enabled;
+    speedEl.disabled = !enabled;
+    legSecondsEl.disabled = !enabled;
+    holdSecondsEl.disabled = !enabled;
+    timelineEl.disabled = !enabled;
+  };
+
+  const cleanupObjectURLs = () => {
+    // only revoke object URLs created for local file sources
+    for (const p of track) {
+      if (p && p.__objUrl) {
+        try { URL.revokeObjectURL(p.__objUrl); } catch(e) {}
+        p.__objUrl = null;
+      }
+    }
+  };
+
+  const resetUI = () => {
+    stopAnim();
+    clearMaps();
+    cleanupObjectURLs();
+
     groupedFiles.clear();
     trackCache.clear();
-
-    cleanupObjectURLs();
     track = [];
     birdId = null;
-    segIndex = 0; segT = 0;
-    clearMaps();
+    segIndex = 0;
+    segT = 0;
+
+    birdSelect.innerHTML = `<option value="">—</option>`;
+    birdSelect.disabled = true;
 
     imgA.removeAttribute("src");
     imgB.removeAttribute("src");
@@ -832,228 +923,20 @@
     metaTime.textContent = "Time: —";
     metaCoords.textContent = "Lat/Lon: —";
     metaInfo.textContent = "Photos used: —";
+    timelineTimeEl.textContent = "—";
 
-    const files = Array.from(folderInput.files || []);
-    const jpgs = files.filter(f => /\.(jpe?g)$/i.test(f.name));
-
-    if (!jpgs.length) {
-      birdSelect.innerHTML = `<option value="">—</option>`;
-      birdSelect.disabled = true;
-      loadBtn.disabled = true;
-      setStatus("No JPG files selected.");
-      return;
-    }
-
-    for (const file of jpgs) {
-      const id = parseBirdId(file.name);
-      if (!id) continue;
-      const dt = parseDatetimeFromFilename(file.name);
-      if (!groupedFiles.has(id)) groupedFiles.set(id, []);
-      groupedFiles.get(id).push({ file, name: file.name, dt });
-    }
-
-    for (const [id, arr] of groupedFiles.entries()) {
-      arr.sort((a,b) => {
-        const ta = a.dt ? a.dt.getTime() : Infinity;
-        const tb = b.dt ? b.dt.getTime() : Infinity;
-        if (ta !== tb) return ta - tb;
-        return a.name.localeCompare(b.name);
-      });
-    }
-
-    const ids = idsSorted();
-    birdSelect.innerHTML = `<option value="">— select —</option>` + ids.map(id => {
-      const n = groupedFiles.get(id).length;
-      return `<option value="${id}">${id} (${n} files)</option>`;
-    }).join("");
-    birdSelect.disabled = false;
-    loadBtn.disabled = true;
-    playBtn.disabled = true;
-    pauseBtn.disabled = true;
-    resetBtn.disabled = true;
-
-    setStatus(
-      `Selected folder contains:\n` +
-      `- JPG files: ${jpgs.length}\n` +
-      `- Individuals detected: ${ids.length}\n\n` +
-      `Pick an individual to load the track (EXIF GPS will be read only for that bird).`
-    );
-    refreshMapSizes();
-  });
-
-  birdSelect.addEventListener("change", async () => {
-    const id = birdSelect.value;
-    if (id) {
-      await loadTrackFor(id, {autoplay: false});
-    }
-  });
-
-  const setLoadingUI = (loading) => {
-    loadBtn.disabled = loading || !birdSelect.value;
-    playBtn.disabled = true;
-    pauseBtn.disabled = true;
-    resetBtn.disabled = loading ? true : (track.length === 0);
+    enablePlaybackControls(false);
+    setStatus("No data loaded.");
   };
 
-  const activateTrack = (points) => {
-    cleanupObjectURLs();
-    track = points.map(p => ({...p, url: URL.createObjectURL(p.file)}));
-  };
-
-  const loadTrackFor = async (id, {autoplay=false} = {}) => {
-    if (!ensureLibs()) {
-      setStatus("Leaflet or exifr failed to load. Check internet connection and refresh.");
-      return;
-    }
-    if (!id || !groupedFiles.has(id)) return;
-
-    stopAnim();
-    setLoadingUI(true);
-
-    birdId = id;
-    metaBird.textContent = `Bird: ${birdId}`;
-    clearMaps();
-
-    if (trackCache.has(id)) {
-      const cached = trackCache.get(id);
-      activateTrack(cached);
-      metaInfo.textContent = `Photos used: ${track.length}`;
-      setStatus(`Loaded bird ${id} from cache.\nUsable geotagged photos: ${track.length}`);
-    } else {
-      const files = groupedFiles.get(id);
-      const tmp = [];
-      setStatus(`Reading EXIF GPS for ${id}… (0 / ${files.length})`);
-
-      for (let i=0; i<files.length; i++) {
-        const { file, name, dt } = files[i];
-        try {
-          const gps = await window.exifr.gps(file);
-          if (gps && typeof gps.latitude === "number" && typeof gps.longitude === "number") {
-            tmp.push({ file, name, dt: dt || null, lat: gps.latitude, lon: gps.longitude });
-          }
-        } catch (e) {}
-        if ((i % 8) === 0 || i === files.length - 1) {
-          setStatus(`Reading EXIF GPS for ${id}… (${i+1} / ${files.length})\nKept points: ${tmp.length}`);
-        }
-      }
-
-      tmp.sort((a,b) => {
-        const ta = a.dt ? a.dt.getTime() : Infinity;
-        const tb = b.dt ? b.dt.getTime() : Infinity;
-        if (ta !== tb) return ta - tb;
-        return a.name.localeCompare(b.name);
-      });
-
-      trackCache.set(id, tmp);
-      activateTrack(tmp);
-
-      metaInfo.textContent = `Photos used: ${track.length}`;
-      setStatus(`Loaded bird ${id}.\nUsable geotagged photos: ${track.length}`);
-    }
-
-    if (birdSelect.value !== id) birdSelect.value = id;
-
-    if (track.length < 1) {
-      playBtn.disabled = true;
-      pauseBtn.disabled = true;
-      resetBtn.disabled = false;
-      setStatus(`Loaded bird ${id}.\nUsable geotagged photos: 0\n\nNo photos with EXIF GPS found for this bird.`);
-      setLoadingUI(false);
-      return;
-    }
-
-    const start = [track[0].lat, track[0].lon];
-    const latlngs = track.map(p => [p.lat, p.lon]);
-
-    overviewLine.setLatLngs(latlngs);
-    overviewMarker.setLatLng(start);
-    if (track.length >= 2) overviewMap.fitBounds(latlngs, { padding: [12,12] });
-    else overviewMap.setView(start, 3);
-
-    const z = Math.max(2, Math.min(18, parseInt(followZoomEl.value||"12",10)));
-    followMarker.setLatLng(start);
-    followFixed = [start];
-    followLine.setLatLngs([start]);
-    followMap.setView(start, z);
-
-    imgA.src = track[0].url;
-    imgB.src = (track[1] ? track[1].url : "");
-    imgA.style.opacity = 1;
-    imgB.style.opacity = 0;
-
-    segIndex = 0;
-    segT = -1;
-    lastTs = null;
-    lastFollowMove = 0;
-
-    metaCoords.textContent = `Lat/Lon: ${track[0].lat.toFixed(5)}, ${track[0].lon.toFixed(5)}`;
-    metaTime.textContent = `Time: ${fmtTime(track[0].dt)}`;
-
-    resetBtn.disabled = false;
-    playBtn.disabled = (track.length < 2);
-    pauseBtn.disabled = true;
-    setLoadingUI(false);
-
-    refreshMapSizes();
-
-    if (autoplay && track.length >= 2) startPlayback();
-  };
-
-  loadBtn.addEventListener("click", async () => {
-    const id = birdSelect.value;
-    await loadTrackFor(id, {autoplay:false});
+  clearBtn.addEventListener("click", () => {
+    folderInput.value = "";
+    resetUI();
   });
 
-  const startPlayback = async () => {
-    if (!track || track.length < 2) return;
-    playing = true;
-    playBtn.disabled = true;
-    pauseBtn.disabled = false;
-    await tryStartMusic();
-    rafId = requestAnimationFrame(tick);
-  };
-
-  playBtn.addEventListener("click", startPlayback);
-
-  pauseBtn.addEventListener("click", () => {
-    stopAnim();
-    playBtn.disabled = false;
-    pauseBtn.disabled = true;
-  });
-
-  const restartCurrentBird = () => {
-    segIndex = 0;
-    segT = -1;
-    lastTs = null;
-    lastFollowMove = 0;
-
-    const start = [track[0].lat, track[0].lon];
-    overviewMarker.setLatLng(start);
-    followMarker.setLatLng(start);
-
-    followFixed = [start];
-    followLine.setLatLngs([start]);
-
-    imgA.src = track[0].url;
-    imgB.src = track[1] ? track[1].url : "";
-    imgA.style.opacity = 1;
-    imgB.style.opacity = 0;
-
-    metaCoords.textContent = `Lat/Lon: ${track[0].lat.toFixed(5)}, ${track[0].lon.toFixed(5)}`;
-    metaTime.textContent = `Time: ${fmtTime(track[0].dt)}`;
-
-    const z = Math.max(2, Math.min(18, parseInt(followZoomEl.value||"12",10)));
-    followMap.setView(start, z, {animate:false});
-  };
-
-  resetBtn.addEventListener("click", () => {
-    stopAnim();
-    if (!track.length) return;
-    restartCurrentBird();
-    playBtn.disabled = (track.length < 2);
-    pauseBtn.disabled = true;
-  });
-
+  // -----------------------------
+  // Follow behavior
+  // -----------------------------
   const maybeMoveFollowMap = (lat, lon, ts) => {
     const z = Math.max(2, Math.min(18, parseInt(followZoomEl.value||"12",10)));
     const mode = followModeEl.value || "edge";
@@ -1071,6 +954,135 @@
       followMap.setView([lat, lon], z, { animate: false });
       lastFollowMove = ts;
     }
+  };
+
+  // -----------------------------
+  // Timeline scrub behavior (video-like)
+  // -----------------------------
+  const beginScrub = () => {
+    scrubActive = true;
+    scrubWasPlaying = playing;
+    if (playing) {
+      stopAnim();
+      playBtn.disabled = false;
+      pauseBtn.disabled = true;
+    }
+  };
+  const endScrub = async () => {
+    if (!scrubActive) return;
+    scrubActive = false;
+    if (scrubWasPlaying) {
+      scrubWasPlaying = false;
+      await resumePlayback();
+    }
+  };
+
+  timelineEl.addEventListener("pointerdown", beginScrub);
+  timelineEl.addEventListener("pointerup", endScrub);
+  timelineEl.addEventListener("pointercancel", endScrub);
+  timelineEl.addEventListener("mousedown", beginScrub);
+  timelineEl.addEventListener("touchstart", beginScrub, {passive:true});
+  document.addEventListener("mouseup", endScrub);
+  document.addEventListener("touchend", endScrub, {passive:true});
+
+  const setSourcesForSegment = (i) => {
+    if (!track || track.length < 1) return;
+    const a = track[i] || track[0];
+    const b = track[i+1] || a;
+    if (imgA.src !== (a.src || "")) imgA.src = a.src || "";
+    if (imgB.src !== (b.src || "")) imgB.src = b.src || "";
+  };
+
+  timelineEl.addEventListener("input", () => {
+    if (!track || track.length < 2) return;
+
+    const v = Math.max(0, Math.min(track.length - 1, parseFloat(timelineEl.value || "0")));
+    const i = Math.floor(v);
+    const t = v - i;
+
+    segIndex = Math.min(i, track.length - 2);
+    segT = t;
+
+    // rebuild fixed line up to segIndex
+    followFixed = track.slice(0, segIndex+1).map(p => [p.lat, p.lon]);
+    followLine.setLatLngs(followFixed);
+
+    setSourcesForSegment(segIndex);
+    renderFrame(segIndex, segT, performance.now());
+  });
+
+  // -----------------------------
+  // Rendering + animation
+  // -----------------------------
+  const syncModalPhotos = () => {
+    if (!photoModal.classList.contains("open")) return;
+    if (modalImgA.src !== imgA.src) modalImgA.src = imgA.src || "";
+    if (modalImgB.src !== imgB.src) modalImgB.src = imgB.src || "";
+    modalImgA.style.opacity = imgA.style.opacity || "1";
+    modalImgB.style.opacity = imgB.style.opacity || "0";
+    modalChip.textContent = `${metaBird.textContent} • ${metaTime.textContent}`;
+  };
+
+  const renderFrame = (i, t, ts) => {
+    const a = track[i];
+    const b = track[i+1] || track[i];
+
+    const lat = lerp(a.lat, b.lat, t);
+    const lon = lerpLonShortest(a.lon, b.lon, t);
+
+    overviewMarker.setLatLng([lat, lon]);
+    followMarker.setLatLng([lat, lon]);
+
+    followLine.setLatLngs(followFixed.concat([[lat, lon]]));
+    maybeMoveFollowMap(lat, lon, ts);
+
+    imgA.style.opacity = (1 - t).toFixed(3);
+    imgB.style.opacity = (t).toFixed(3);
+
+    let curTime = null;
+    if (a.dt && b.dt) {
+      const ta = a.dt.getTime();
+      const tb = b.dt.getTime();
+      curTime = new Date(ta + (tb - ta) * t);
+    } else if (a.dt) curTime = a.dt;
+
+    metaCoords.textContent = `Lat/Lon: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+    metaTime.textContent = `Time: ${fmtTime(curTime)}`;
+    timelineTimeEl.textContent = `Time: ${fmtTime(curTime)}`;
+
+    if (!scrubActive) timelineEl.value = String(i + t);
+
+    syncModalPhotos();
+  };
+
+  const restartCurrentBird = () => {
+    segIndex = 0;
+    segT = -1;
+    lastTs = null;
+    lastFollowMove = 0;
+
+    const start = [track[0].lat, track[0].lon];
+    overviewMarker.setLatLng(start);
+    followMarker.setLatLng(start);
+
+    followFixed = [start];
+    followLine.setLatLngs([start]);
+
+    setSourcesForSegment(0);
+    imgA.style.opacity = 1;
+    imgB.style.opacity = 0;
+
+    metaCoords.textContent = `Lat/Lon: ${track[0].lat.toFixed(5)}, ${track[0].lon.toFixed(5)}`;
+    metaTime.textContent = `Time: ${fmtTime(track[0].dt)}`;
+    timelineTimeEl.textContent = `Time: ${fmtTime(track[0].dt)}`;
+
+    const z = Math.max(2, Math.min(18, parseInt(followZoomEl.value||"12",10)));
+    followMap.setView(start, z, {animate:false});
+
+    timelineEl.min = "0";
+    timelineEl.max = String(track.length - 1);
+    timelineEl.step = "0.001";
+    timelineEl.value = "0";
   };
 
   const advanceToNextBirdAndPlay = async () => {
@@ -1093,8 +1105,8 @@
     lastTs = ts;
 
     const speed = parseFloat(speedEl.value || "1");
-    const legSeconds = Math.max(0.1, parseFloat(legSecondsEl.value || "2.0"));
-    const holdSeconds = Math.max(0.0, parseFloat(holdSecondsEl.value || "0.4"));
+    const legSeconds = Math.max(0.1, parseFloat(legSecondsEl.value || "3.0"));
+    const holdSeconds = Math.max(0.0, parseFloat(holdSecondsEl.value || "1.0"));
 
     if (segT < 0) {
       if (holdSeconds <= 0.0001) segT = 0;
@@ -1133,7 +1145,6 @@
           rafId = requestAnimationFrame(tick);
           return;
         }
-
         stopAnim();
         playBtn.disabled = false;
         pauseBtn.disabled = true;
@@ -1141,8 +1152,8 @@
         return;
       }
 
-      imgA.src = track[segIndex].url;
-      imgB.src = track[segIndex+1].url;
+      // advance image sources for next segment
+      setSourcesForSegment(segIndex);
       imgA.style.opacity = 1;
       imgB.style.opacity = 0;
 
@@ -1154,47 +1165,374 @@
     rafId = requestAnimationFrame(tick);
   };
 
-  const syncModalPhotos = () => {
-    if (!photoModal.classList.contains("open")) return;
-    if (modalImgA.src !== imgA.src) modalImgA.src = imgA.src || "";
-    if (modalImgB.src !== imgB.src) modalImgB.src = imgB.src || "";
-    modalImgA.style.opacity = imgA.style.opacity || "1";
-    modalImgB.style.opacity = imgB.style.opacity || "0";
-    modalChip.textContent = `${metaBird.textContent} • ${metaTime.textContent}`;
+  const startPlayback = async () => {
+    if (!track || track.length < 2) return;
+    playing = true;
+    playBtn.disabled = true;
+    pauseBtn.disabled = false;
+    lastTs = null;
+    await tryStartMusic();
+    rafId = requestAnimationFrame(tick);
   };
 
-  const renderFrame = (i, t, ts) => {
-    const a = track[i];
-    const b = track[i+1] || track[i];
-
-    const lat = lerp(a.lat, b.lat, t);
-    const lon = lerpLonShortest(a.lon, b.lon, t);
-
-    overviewMarker.setLatLng([lat, lon]);
-    followMarker.setLatLng([lat, lon]);
-
-    followLine.setLatLngs(followFixed.concat([[lat, lon]]));
-
-    maybeMoveFollowMap(lat, lon, ts);
-
-    imgA.style.opacity = (1 - t).toFixed(3);
-    imgB.style.opacity = (t).toFixed(3);
-
-    let curTime = null;
-    if (a.dt && b.dt) {
-      const ta = a.dt.getTime();
-      const tb = b.dt.getTime();
-      curTime = new Date(ta + (tb - ta) * t);
-    } else if (a.dt) curTime = a.dt;
-
-    metaCoords.textContent = `Lat/Lon: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-    metaTime.textContent = `Time: ${fmtTime(curTime)}`;
-
-    syncModalPhotos();
+  const resumePlayback = async () => {
+    if (!track || track.length < 2) return;
+    playing = true;
+    playBtn.disabled = true;
+    pauseBtn.disabled = false;
+    lastTs = null;
+    await tryStartMusic();
+    rafId = requestAnimationFrame(tick);
   };
 
-  if (!ensureLibs()) setStatus("Waiting for libraries… If this stays, check your internet connection.");
-  else setStatus("Select a folder with stork JPGs to begin.");
+  playBtn.addEventListener("click", startPlayback);
+  pauseBtn.addEventListener("click", () => {
+    stopAnim();
+    playBtn.disabled = false;
+    pauseBtn.disabled = true;
+  });
+  resetBtn.addEventListener("click", () => {
+    stopAnim();
+    if (!track.length) return;
+    restartCurrentBird();
+    playBtn.disabled = (track.length < 2);
+    pauseBtn.disabled = true;
+  });
+
+  // -----------------------------
+  // Loading: local folder
+  // -----------------------------
+  const buildGroupsFromItems = (items, sourceLabel) => {
+    resetUI();
+    groupedFiles.clear();
+    trackCache.clear();
+
+    const jpgs = items.filter(it => it && it.name && /\\.(jpe?g)$/i.test(it.name));
+    if (!jpgs.length) {
+      setStatus(`No JPG files found (${sourceLabel}).`);
+      return false;
+    }
+
+    for (const it of jpgs) {
+      const id = parseBirdId(it.name);
+      if (!id) continue;
+      const dt = parseDatetimeFromFilename(it.name);
+      if (!groupedFiles.has(id)) groupedFiles.set(id, []);
+      groupedFiles.get(id).push({ ...it, dt });
+    }
+
+    for (const [id, arr] of groupedFiles.entries()) {
+      arr.sort((a,b) => {
+        const ta = a.dt ? a.dt.getTime() : Infinity;
+        const tb = b.dt ? b.dt.getTime() : Infinity;
+        if (ta !== tb) return ta - tb;
+        return String(a.name).localeCompare(String(b.name));
+      });
+    }
+
+    const ids = idsSorted();
+    birdSelect.innerHTML = `<option value="">— select —</option>` + ids.map(id => {
+      const n = groupedFiles.get(id).length;
+      return `<option value="${id}">${id} (${n} files)</option>`;
+    }).join("");
+    birdSelect.disabled = ids.length === 0;
+
+    setStatus(
+      `Loaded data source: ${sourceLabel}\n` +
+      `- JPG files: ${jpgs.length}\n` +
+      `- Individuals detected: ${ids.length}\n\n` +
+      `Default: Loop all birds is ON.`
+    );
+    refreshMapSizes();
+    return ids.length > 0;
+  };
+
+  folderInput.addEventListener("change", async () => {
+    const files = Array.from(folderInput.files || []);
+    const items = files.map(f => ({ source:"file", file:f, name:f.name }));
+    const ok = buildGroupsFromItems(items, "local folder");
+    if (!ok) return;
+
+    // auto-load first bird, autoplay, loop all (default)
+    const ids = idsSorted();
+    if (ids.length) {
+      birdSelect.value = ids[0];
+      await loadTrackFor(ids[0], { autoplay:true });
+    }
+  });
+
+  birdSelect.addEventListener("change", async () => {
+    const id = birdSelect.value;
+    if (!id) return;
+    await loadTrackFor(id, { autoplay:false });
+  });
+
+  // -----------------------------
+  // Loading: GitHub repo media_data/
+  // -----------------------------
+  const DEFAULT_OWNER = "jankowiakl";
+  const DEFAULT_REPO = "stork_journey";
+  const DEFAULT_DIR = "media_data";
+  const DEFAULT_BRANCHES = ["main", "master"];
+
+  // 1) Try ./media_data/manifest.json (recommended if you add it), else
+  // 2) Use GitHub API git/trees/<branch>?recursive=1 to list files.
+  const tryLoadManifest = async () => {
+    const url = new URL(`./${DEFAULT_DIR}/manifest.json`, location.href);
+    url.searchParams.set("v", String(Date.now()));
+    const res = await fetch(url.toString(), { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!Array.isArray(data)) return null;
+
+    const items = [];
+    for (const entry of data) {
+      const p = (typeof entry === "string") ? entry : (entry && entry.path ? entry.path : null);
+      if (!p) continue;
+      if (!p.startsWith(`${DEFAULT_DIR}/`)) continue;
+      if (!/\\.(jpe?g)$/i.test(p)) continue;
+      const u = new URL(p, location.href).toString();
+      items.push({ source:"url", url:u, name: p.split("/").pop() });
+    }
+    return items.length ? items : null;
+  };
+
+  const loadFromGitHubTree = async () => {
+    for (const br of DEFAULT_BRANCHES) {
+      const api = `https://api.github.com/repos/${DEFAULT_OWNER}/${DEFAULT_REPO}/git/trees/${br}?recursive=1`;
+      try {
+        const res = await fetch(api, { headers: { "Accept": "application/vnd.github+json" } });
+        if (!res.ok) continue;
+        const json = await res.json();
+        if (!json || !Array.isArray(json.tree)) continue;
+
+        const items = [];
+        for (const node of json.tree) {
+          if (!node || node.type !== "blob" || !node.path) continue;
+          if (!node.path.startsWith(`${DEFAULT_DIR}/`)) continue;
+          if (!/\\.(jpe?g)$/i.test(node.path)) continue;
+          const raw = `https://raw.githubusercontent.com/${DEFAULT_OWNER}/${DEFAULT_REPO}/${br}/${node.path}`;
+          items.push({ source:"url", url: raw, name: node.path.split("/").pop() });
+        }
+        if (items.length) return { items, branch: br, method: "github-api" };
+      } catch(e) {}
+    }
+    return null;
+  };
+
+  const autoLoadFromGitHub = async ({autoplay=true} = {}) => {
+    if (!ensureLibs()) {
+      setStatus("Leaflet or exifr failed to load. Check internet connection and refresh.");
+      return;
+    }
+
+    setStatus("Auto-loading media_data from this repo…");
+
+    // A) local manifest (best: no rate limit, same-origin)
+    try {
+      const manifestItems = await tryLoadManifest();
+      if (manifestItems) {
+        const ok = buildGroupsFromItems(manifestItems, `./${DEFAULT_DIR}/manifest.json`);
+        if (!ok) return;
+        const ids = idsSorted();
+        if (ids.length) {
+          birdSelect.value = ids[0];
+          await loadTrackFor(ids[0], { autoplay });
+        }
+        return;
+      }
+    } catch(e) {}
+
+    // B) GitHub API fallback
+    setStatus("No manifest.json found — using GitHub API to list media_data/ …");
+    const got = await loadFromGitHubTree();
+    if (!got) {
+      setStatus(
+        "Failed to list media_data via GitHub API.\n\n" +
+        "Possible reasons: repo/branch name mismatch, rate limit, or no internet.\n" +
+        "You can still load a local folder using the file picker."
+      );
+      return;
+    }
+
+    const ok = buildGroupsFromItems(got.items, `GitHub API (${DEFAULT_OWNER}/${DEFAULT_REPO}@${got.branch}/${DEFAULT_DIR})`);
+    if (!ok) return;
+
+    const ids = idsSorted();
+    if (ids.length) {
+      birdSelect.value = ids[0];
+      await loadTrackFor(ids[0], { autoplay });
+    }
+  };
+
+  reloadGitHubBtn.addEventListener("click", () => autoLoadFromGitHub({autoplay:true}));
+
+  // -----------------------------
+  // Load track for a bird (read EXIF GPS)
+  // -----------------------------
+  const fetchArrayBuffer = async (url) => {
+    const res = await fetch(url, { mode: "cors", cache: "force-cache" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.arrayBuffer();
+  };
+
+  const getGpsForItem = async (it) => {
+    if (it.source === "file" && it.file) {
+      return await window.exifr.gps(it.file);
+    }
+    if (it.source === "url" && it.url) {
+      const buf = await fetchArrayBuffer(it.url);
+      return await window.exifr.gps(buf);
+    }
+    return null;
+  };
+
+  const activateTrack = (points) => {
+    cleanupObjectURLs();
+    // points: [{name, dt, lat, lon, source, file?, url?}]
+    track = points.map(p => {
+      const out = { ...p };
+      if (p.source === "file" && p.file) {
+        const obj = URL.createObjectURL(p.file);
+        out.src = obj;
+        out.__objUrl = obj;
+      } else if (p.source === "url" && p.url) {
+        out.src = p.url;
+        out.__objUrl = null;
+      } else {
+        out.src = "";
+      }
+      return out;
+    });
+  };
+
+  const loadTrackFor = async (id, {autoplay=false} = {}) => {
+    if (!ensureLibs()) {
+      setStatus("Leaflet or exifr failed to load. Check internet connection and refresh.");
+      return;
+    }
+    if (!id || !groupedFiles.has(id)) return;
+
+    stopAnim();
+    playBtn.disabled = true;
+    pauseBtn.disabled = true;
+    resetBtn.disabled = true;
+    enablePlaybackControls(false);
+
+    birdId = id;
+    metaBird.textContent = `Bird: ${birdId}`;
+    clearMaps();
+
+    if (trackCache.has(id)) {
+      const cached = trackCache.get(id);
+      activateTrack(cached);
+      metaInfo.textContent = `Photos used: ${track.length}`;
+      setStatus(`Loaded bird ${id} from cache.\nUsable geotagged photos: ${track.length}`);
+    } else {
+      const files = groupedFiles.get(id);
+      const tmp = [];
+      setStatus(`Reading EXIF GPS for ${id}… (0 / ${files.length})`);
+
+      for (let i=0; i<files.length; i++) {
+        const it = files[i];
+        try {
+          const gps = await getGpsForItem(it);
+          if (gps && typeof gps.latitude === "number" && typeof gps.longitude === "number") {
+            tmp.push({
+              source: it.source,
+              file: it.file,
+              url: it.url,
+              name: it.name,
+              dt: it.dt || null,
+              lat: gps.latitude,
+              lon: gps.longitude
+            });
+          }
+        } catch(e) {}
+
+        if ((i % 8) === 0 || i === files.length - 1) {
+          setStatus(`Reading EXIF GPS for ${id}… (${i+1} / ${files.length})\nKept points: ${tmp.length}`);
+        }
+      }
+
+      tmp.sort((a,b) => {
+        const ta = a.dt ? a.dt.getTime() : Infinity;
+        const tb = b.dt ? b.dt.getTime() : Infinity;
+        if (ta !== tb) return ta - tb;
+        return String(a.name).localeCompare(String(b.name));
+      });
+
+      trackCache.set(id, tmp);
+      activateTrack(tmp);
+
+      metaInfo.textContent = `Photos used: ${track.length}`;
+      setStatus(`Loaded bird ${id}.\nUsable geotagged photos: ${track.length}`);
+    }
+
+    if (birdSelect.value !== id) birdSelect.value = id;
+
+    if (track.length < 1) {
+      setStatus(`Loaded bird ${id}.\nUsable geotagged photos: 0\n\nNo photos with EXIF GPS found for this bird.`);
+      resetBtn.disabled = false;
+      metaInfo.textContent = `Photos used: 0`;
+      return;
+    }
+
+    const start = [track[0].lat, track[0].lon];
+    const latlngs = track.map(p => [p.lat, p.lon]);
+
+    overviewLine.setLatLngs(latlngs);
+    overviewMarker.setLatLng(start);
+    if (track.length >= 2) overviewMap.fitBounds(latlngs, { padding: [12,12] });
+    else overviewMap.setView(start, 3);
+
+    const z = Math.max(2, Math.min(18, parseInt(followZoomEl.value||"12",10)));
+    followMarker.setLatLng(start);
+    followFixed = [start];
+    followLine.setLatLngs([start]);
+    followMap.setView(start, z, { animate:false });
+
+    setSourcesForSegment(0);
+    imgA.style.opacity = 1;
+    imgB.style.opacity = 0;
+
+    segIndex = 0;
+    segT = -1;
+    lastTs = null;
+    lastFollowMove = 0;
+
+    metaCoords.textContent = `Lat/Lon: ${track[0].lat.toFixed(5)}, ${track[0].lon.toFixed(5)}`;
+    metaTime.textContent = `Time: ${fmtTime(track[0].dt)}`;
+    timelineTimeEl.textContent = `Time: ${fmtTime(track[0].dt)}`;
+
+    timelineEl.min = "0";
+    timelineEl.max = String(track.length - 1);
+    timelineEl.step = "0.001";
+    timelineEl.value = "0";
+
+    const playable = track.length >= 2;
+    enablePlaybackControls(playable);
+    resetBtn.disabled = false;
+
+    refreshMapSizes();
+
+    if (autoplay && playable) await startPlayback();
+  };
+
+  // -----------------------------
+  // Init
+  // -----------------------------
+  if (!ensureLibs()) {
+    setStatus("Waiting for libraries… If this stays, check your internet connection.");
+  } else {
+    setStatus("Loading default data…");
+  }
+  setMusicToggleLabel();
+
+  // Default: auto load from GitHub repo folder media_data + autoplay + loop all
+  window.addEventListener("DOMContentLoaded", () => {
+    autoLoadFromGitHub({autoplay:true});
+  });
 })();
 </script>
 </body>

@@ -1256,10 +1256,22 @@ loopCurrentEl.checked = false;
   applyBasemap(basemapSelect.value || "esriImageryLabels");
 
   const overviewLine = L.polyline([], { weight: 3, opacity: 0.85 }).addTo(overviewMap);
-  const overviewMarker = L.circleMarker([0,0], { radius: 6, weight: 2, fillOpacity: 0.9 }).addTo(overviewMap);
+  const overviewMarker = L.circleMarker([0,0], {
+    radius: 6,
+    color: "#fff",
+    fillColor: "#3388ff",
+    weight: 3,
+    fillOpacity: 0.95
+  }).addTo(overviewMap);
 
   const followLine = L.polyline([], { weight: 4, opacity: 0.90 }).addTo(followMap);
-  const followMarker = L.circleMarker([0,0], { radius: 7, weight: 2, fillOpacity: 0.9 }).addTo(followMap);
+  const followMarker = L.circleMarker([0,0], {
+    radius: 7,
+    color: "#fff",
+    fillColor: "#3388ff",
+    weight: 3,
+    fillOpacity: 0.95
+  }).addTo(followMap);
 
   const groupedFiles = new Map();
   const trackCache = new Map();

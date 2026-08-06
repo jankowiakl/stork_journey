@@ -1280,6 +1280,10 @@ loopCurrentEl.checked = false;
 
   // Optional reference data. These layers are deliberately independent of the
   // animated EXIF line, so the original photo-location animation is unchanged.
+  for (const map of [followMap, overviewMap]) {
+    map.createPane("referencePane");
+    map.getPane("referencePane").style.zIndex = 395; // behind the animated track (overlay pane: 400)
+  }
   const referenceLayers = {
     followPath: L.layerGroup().addTo(followMap),
     followStops: L.layerGroup().addTo(followMap),
@@ -1292,22 +1296,46 @@ loopCurrentEl.checked = false;
   const featureMatchesBird = (feature, id) => {
     const wanted = normaliseId(id);
     const props = feature.properties || {};
-    const preferred = ["id", "bird_id", "birdid", "individual_id", "individual", "name", "bird"];
-    const key = Object.keys(props).find(k => preferred.includes(k.toLowerCase()));
-    if (key) return normaliseId(props[key]) === wanted;
+    // The GPS text file calls the bird identifier `time_agg`. Do not treat its
+    // per-row `id` column as the bird ID: it is only a sequential point number.
+    const preferred = ["time_agg", "bird_id", "birdid", "individual_id", "individual", "name", "bird", "type"];
+    const preferredValues = Object.entries(props)
+      .filter(([key]) => preferred.includes(key.toLowerCase()))
+      .map(([, value]) => value);
+    if (preferredValues.some(value => normaliseId(value) === wanted)) return true;
     return Object.values(props).some(value => normaliseId(value) === wanted);
+  };
+
+  const featureTooltip = (feature) => {
+    const box = document.createElement("div");
+    const properties = Object.entries(feature.properties || {}).filter(([, value]) => value != null && value !== "");
+    for (const [key, value] of properties) {
+      const row = document.createElement("div");
+      const label = document.createElement("strong");
+      label.textContent = `${key}: `;
+      row.append(label, document.createTextNode(String(value)));
+      box.appendChild(row);
+    }
+    return box;
   };
 
   const clearReferenceLayers = () => Object.values(referenceLayers).forEach(layer => layer.clearLayers());
   const renderReferenceData = (id) => {
     clearReferenceLayers();
     if (!id || !referenceData.loaded) return;
-    const paths = referenceData.paths.filter(f => featureMatchesBird(f, id));
+    const paths = referenceData.paths.filter(f => featureMatchesBird(f, id)).sort((a, b) => {
+      const value = feature => feature.properties?.DateTime || feature.properties?.datetime || feature.properties?.countN || "";
+      return String(value(a)).localeCompare(String(value(b)), undefined, { numeric: true });
+    });
     const stops = referenceData.stopovers.filter(f => featureMatchesBird(f, id));
-    const pathStyle = { color: "#ffb347", weight: 3, opacity: 0.9, radius: 4, fillOpacity: 0.75 };
-    const stopStyle = { color: "#39d98a", weight: 2, opacity: 0.95, radius: 7, fillColor: "#39d98a", fillOpacity: 0.35 };
+    const pathStyle = { pane: "referencePane", color: "#ffb347", weight: 3, opacity: 0.9, radius: 4, fillOpacity: 0.75 };
+    const stopStyle = { pane: "referencePane", color: "#39d98a", weight: 2, opacity: 0.95, radius: 7, fillColor: "#39d98a", fillOpacity: 0.35 };
     const add = (features, a, b, style) => {
-      const options = { style: () => style, pointToLayer: (_f, ll) => L.circleMarker(ll, style) };
+      const options = {
+        style: () => style,
+        pointToLayer: (_f, ll) => L.circleMarker(ll, style),
+        onEachFeature: (feature, layer) => layer.bindTooltip(featureTooltip(feature), { sticky: true, maxWidth: 360 })
+      };
       L.geoJSON(features, options).addTo(a);
       L.geoJSON(features, options).addTo(b);
     };
@@ -1318,8 +1346,9 @@ loopCurrentEl.checked = false;
       const pointRoute = paths.filter(f => f.geometry && f.geometry.type === "Point")
         .map(f => [f.geometry.coordinates[1], f.geometry.coordinates[0]]);
       if (pointRoute.length > 1) {
-        L.polyline(pointRoute, pathStyle).addTo(referenceLayers.followPath);
-        L.polyline(pointRoute, pathStyle).addTo(referenceLayers.overviewPath);
+        const routeTooltip = `${id}: ${pointRoute.length} GPS track points`;
+        L.polyline(pointRoute, pathStyle).bindTooltip(routeTooltip, { sticky: true }).addTo(referenceLayers.followPath);
+        L.polyline(pointRoute, pathStyle).bindTooltip(routeTooltip, { sticky: true }).addTo(referenceLayers.overviewPath);
       }
     }
     if (showStopoversEl.checked) add(stops, referenceLayers.followStops, referenceLayers.overviewStops, stopStyle);
@@ -1379,6 +1408,42 @@ loopCurrentEl.checked = false;
     return features;
   };
 
+  const parseDelimitedTrack = (text) => {
+    const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter(line => line.trim());
+    if (lines.length < 2) return [];
+    const delimiter = lines[0].includes("\t") ? "\t" : ",";
+    const parseRow = line => {
+      const values = []; let value = ""; let quoted = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"' && quoted && line[i + 1] === '"') { value += '"'; i++; }
+        else if (char === '"') quoted = !quoted;
+        else if (char === delimiter && !quoted) { values.push(value); value = ""; }
+        else value += char;
+      }
+      values.push(value);
+      return values.map(item => item.trim());
+    };
+    const headers = parseRow(lines[0]);
+    const features = [];
+    for (const line of lines.slice(1)) {
+      const values = parseRow(line);
+      // A published track file has one more data field (the Unix timestamp)
+      // than its header. Keep id/time_agg aligned at the left and the spatial
+      // and descriptive columns aligned at the right in that case.
+      const missingHeaders = Math.max(0, values.length - headers.length);
+      const rowHeaders = missingHeaders
+        ? [...headers.slice(0, 2), ...Array.from({length: missingHeaders}, (_, i) => `_extra_${i + 1}`), ...headers.slice(2)]
+        : headers;
+      const properties = Object.fromEntries(rowHeaders.map((header, index) => [header, values[index] ?? ""]));
+      const lon = Number(properties.lon ?? properties.longitude ?? properties.x);
+      const lat = Number(properties.lat ?? properties.latitude ?? properties.y);
+      if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue;
+      features.push({ type: "Feature", properties, geometry: { type: "Point", coordinates: [lon, lat] } });
+    }
+    return features;
+  };
+
   const loadReferenceData = async () => {
     try {
       const api = "https://api.github.com/repos/jankowiakl/stork-migration-page";
@@ -1388,15 +1453,23 @@ loopCurrentEl.checked = false;
       const treeResponse = await fetch(`${api}/git/trees/${encodeURIComponent(repo.default_branch)}?recursive=1`);
       if (!treeResponse.ok) throw new Error(`GitHub tree API ${treeResponse.status}`);
       const tree = await treeResponse.json();
-      const files = tree.tree.filter(item => item.type === "blob" && /\.(gpkg|geojson|json)$/i.test(item.path));
+      const files = tree.tree.filter(item => item.type === "blob" && /\.(gpkg|geojson|json|txt|csv|tsv)$/i.test(item.path));
       for (const file of files) {
         const raw = `https://raw.githubusercontent.com/jankowiakl/stork-migration-page/${encodeURIComponent(repo.default_branch)}/${file.path.split('/').map(encodeURIComponent).join('/')}`;
         const response = await fetch(raw);
         if (!response.ok) continue;
+        const isDelimitedTrack = /\.(txt|csv|tsv)$/i.test(file.path);
         const features = /\.gpkg$/i.test(file.path)
           ? await parseGeoPackage(await response.arrayBuffer())
-          : ((await response.json()).features || []);
-        const target = /stop|site/i.test(file.path) ? referenceData.stopovers : referenceData.paths;
+          : isDelimitedTrack
+            ? parseDelimitedTrack(await response.text())
+            : ((await response.json()).features || []);
+        // The repository stores GPS fixes in a delimited text file and stopover
+        // polygons in a GeoPackage. Extension-based classification prevents the
+        // two settings checkboxes from accidentally controlling the wrong data.
+        const target = isDelimitedTrack || (!/\.gpkg$/i.test(file.path) && !/stop|site/i.test(file.path))
+          ? referenceData.paths
+          : referenceData.stopovers;
         target.push(...features);
       }
       referenceData.loaded = true;

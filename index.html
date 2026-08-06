@@ -315,6 +315,57 @@
     }
     .leaflet-container { background: #0a0f1c; }
 
+    .leaflet-tooltip.gpsInfoTooltip,
+    .leaflet-tooltip.stopoverInfoTooltip {
+      min-width: 170px;
+      max-width: 280px;
+      white-space: normal;
+      padding: 0;
+      overflow: hidden;
+      border-radius: 12px;
+      background: rgba(7, 11, 20, 0.96);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.22);
+      box-shadow: 0 8px 22px rgba(0,0,0,.38);
+      line-height: 1.3;
+      font-size: 12px;
+    }
+    .leaflet-tooltip.gpsInfoTooltip:before,
+    .leaflet-tooltip.stopoverInfoTooltip:before {
+      border-top-color: rgba(7, 11, 20, 0.94);
+    }
+    .mapTip { padding: 10px 12px; }
+    .mapTipTitle {
+      margin-bottom: 5px;
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .mapTipTime {
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .mapTipRow {
+      display: grid;
+      grid-template-columns: 70px 1fr;
+      gap: 8px;
+      align-items: baseline;
+      margin-top: 5px;
+    }
+    .mapTipLabel { color: var(--muted); }
+    .mapTipValue { color: #fff; font-weight: 650; white-space: nowrap; }
+    .mapTipDuration {
+      margin-top: 8px;
+      padding-top: 7px;
+      border-top: 1px solid rgba(255,255,255,.12);
+      color: #ffd166;
+      font-weight: 750;
+    }
+
     .photoTools{
       position:absolute;
       right:12px;
@@ -322,6 +373,74 @@
       z-index:20;
       display:flex;
       gap:8px;
+    }
+
+    .photoNav {
+      position: absolute;
+      top: 50%;
+      z-index: 24;
+      transform: translateY(-50%);
+      min-width: 46px;
+      height: 46px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.20);
+      background: rgba(7,11,20,.26);
+      color: rgba(255,255,255,.90);
+      box-shadow: 0 8px 22px rgba(0,0,0,.22);
+      backdrop-filter: blur(7px);
+      -webkit-backdrop-filter: blur(7px);
+      font-size: 13px;
+      font-weight: 750;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .16s ease, background .16s ease, transform .16s ease;
+    }
+    .photoNav.prev { left: 12px; }
+    .photoNav.next { right: 12px; }
+    .photoStage.navControlsVisible .photoNav {
+      opacity: .72;
+      pointer-events: auto;
+    }
+    .photoNav:hover:not(:disabled) {
+      opacity: 1;
+      background: rgba(7,11,20,.62);
+      transform: translateY(-50%) scale(1.04);
+    }
+    .photoNav:disabled { opacity: 0 !important; }
+    .photoStage.navControlsVisible .photoNav:disabled { opacity: .10 !important; }
+
+    .subSettings {
+      margin-top: 12px;
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 12px;
+      background: rgba(0,0,0,.12);
+      overflow: hidden;
+    }
+    .subSettings summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 10px;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      list-style: none;
+      user-select: none;
+    }
+    .subSettings summary::-webkit-details-marker { display: none; }
+    .subSettings summary::after {
+      content: "Show";
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .subSettings[open] summary::after { content: "Hide"; }
+    .subSettingsBody {
+      padding: 0 10px 10px;
+      border-top: 1px solid rgba(255,255,255,.08);
     }
 
     .miniNote {
@@ -478,6 +597,8 @@
 @media (hover: none) {
   #sliderOverlay { opacity: 1; }
   .photoStage:hover #sliderOverlay { opacity: 1; }
+  .photoNav { opacity: .62; pointer-events: auto; }
+  .photoNav:disabled { opacity: .10 !important; }
 }
 
 
@@ -679,36 +800,48 @@
           <label title="Auto-switch to the next bird, and loop through all birds in the folder"><input id="loopAll" type="checkbox" checked> Loop all birds</label>
         </div>
 
-        <div class="row">
-          <div>
-            <label>Background music</label>
-            <select id="musicSelect">
-              <option value="off" selected>Off</option>
-              <option value="sample2">Relaxing sample 1 (piano)</option>
-              <option value="sample1">Relaxing sample 2 (piano)</option>
-              <option value="sample3">Relaxing sample 3 (piano)</option>
-              <option value="somafm_drone">SomaFM — Drone Zone (live ambient)</option>
-              <option value="somafm_spacestation">SomaFM — Space Station Soma (live ambient)</option>
-              <option value="somafm_synphaera">SomaFM — Synphaera (live ambient/space)</option>
-              <option value="random_somafm">Random live station (SomaFM)</option>
-              <option value="upload">Upload your own</option>
-            </select>
-          </div>
-          <div>
-            <label>Volume</label>
-            <input id="musicVol" type="range" min="0" max="1" step="0.01" value="0.35" />
-          </div>
+        <div class="checkRow">
+          <label title="Show the complete GPS track for the selected bird"><input id="showGpsTrack" type="checkbox" checked> Full GPS track</label>
+          <label title="Highlight the GPS positions recorded between the two currently animated photos"><input id="showPhotoGpsSegment" type="checkbox" checked> GPS between photos</label>
+          <label title="Show stopover polygons for the selected bird"><input id="showStopovers" type="checkbox" checked> Stopovers</label>
         </div>
+        <div class="miniNote" id="backgroundDataStatus">GPS &amp; stopovers: loading automatically…</div>
 
-        <div id="musicUploadRow" style="display:none; margin-top: 10px;">
-          <label>Upload audio file (mp3/ogg/wav)</label>
-          <input id="musicFile" type="file" accept="audio/*" />
-        </div>
+        <details class="subSettings" id="musicDetails">
+          <summary>Music <span style="font-weight:500; opacity:.72;">optional</span></summary>
+          <div class="subSettingsBody">
+            <div class="row">
+              <div>
+                <label>Background music</label>
+                <select id="musicSelect">
+                  <option value="off" selected>Off</option>
+                  <option value="sample2">Relaxing sample 1 (piano)</option>
+                  <option value="sample1">Relaxing sample 2 (piano)</option>
+                  <option value="sample3">Relaxing sample 3 (piano)</option>
+                  <option value="somafm_drone">SomaFM — Drone Zone (live ambient)</option>
+                  <option value="somafm_spacestation">SomaFM — Space Station Soma (live ambient)</option>
+                  <option value="somafm_synphaera">SomaFM — Synphaera (live ambient/space)</option>
+                  <option value="random_somafm">Random live station (SomaFM)</option>
+                  <option value="upload">Upload your own</option>
+                </select>
+              </div>
+              <div>
+                <label>Volume</label>
+                <input id="musicVol" type="range" min="0" max="1" step="0.01" value="0.35" />
+              </div>
+            </div>
 
-        <div class="btnrow" style="margin-top:10px;">
-          <button id="musicToggle" class="secondary tiny" type="button" disabled>Play music</button>
-        </div>
-        <div class="miniNote" id="musicAttribution"></div>
+            <div id="musicUploadRow" style="display:none; margin-top: 10px;">
+              <label>Upload audio file (mp3/ogg/wav)</label>
+              <input id="musicFile" type="file" accept="audio/*" />
+            </div>
+
+            <div class="btnrow" style="margin-top:10px;">
+              <button id="musicToggle" class="secondary tiny" type="button" disabled>Play music</button>
+            </div>
+            <div class="miniNote" id="musicAttribution"></div>
+          </div>
+        </details>
 
         <div class="btnrow">
           <button id="loadBtn" disabled>Load track</button>
@@ -726,6 +859,8 @@
         <div class="photoTools">
           <button id="enlargePhoto" class="secondary tiny" type="button">Enlarge photo</button>
         </div>
+        <button id="prevPhoto" class="photoNav prev" type="button" title="Previous photo" aria-label="Previous photo" disabled>−1</button>
+        <button id="nextPhoto" class="photoNav next" type="button" title="Next photo" aria-label="Next photo" disabled>+1</button>
         <img id="imgA" alt="photo A" style="opacity:1;">
         <img id="imgB" alt="photo B" style="opacity:0;">
         <div id="sliderOverlay" style="display:none;">
@@ -781,6 +916,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+<script src="https://unpkg.com/@ngageoint/geopackage/dist/geopackage.min.js"></script>
 
 <script>
 (() => {
@@ -806,6 +942,11 @@
   const loopCurrentEl = el("loopCurrent");
   const loopAllEl     = el("loopAll");
 
+  const showGpsTrackEl        = el("showGpsTrack");
+  const showPhotoGpsSegmentEl = el("showPhotoGpsSegment");
+  const showStopoversEl       = el("showStopovers");
+  const backgroundDataStatusEl= el("backgroundDataStatus");
+
   const musicSelectEl = el("musicSelect");
   const musicVolEl    = el("musicVol");
   const musicFileEl   = el("musicFile");
@@ -818,6 +959,9 @@
 
   const imgA = el("imgA");
   const imgB = el("imgB");
+  const photoStageEl = document.querySelector(".photoStage");
+  const prevPhotoBtn = el("prevPhoto");
+  const nextPhotoBtn = el("nextPhoto");
 
   const metaBird   = el("metaBird");
   const metaTime   = el("metaTime");
@@ -1273,8 +1417,84 @@ loopCurrentEl.checked = false;
     fillOpacity: 0.95
   }).addTo(followMap);
 
+  // Optional data layers. They sit underneath the original animated blue line,
+  // so the existing photo animation remains visually unchanged.
+  const ensureDataPane = (map, name, zIndex) => {
+    if (!map.getPane(name)) map.createPane(name);
+    map.getPane(name).style.zIndex = String(zIndex);
+  };
+  for (const map of [followMap, overviewMap]) {
+    ensureDataPane(map, "stopoverPane", 395);
+    ensureDataPane(map, "gpsBackgroundPane", 397);
+    ensureDataPane(map, "gpsSegmentPane", 399);
+  }
+  ensureDataPane(followMap, "gpsHitPane", 401);
+
+  const gpsFullFollowLine = L.polyline([], {
+    pane: "gpsBackgroundPane", color: "#73e0c1", weight: 2, opacity: 0.58,
+    dashArray: "5 6", interactive: false
+  }).addTo(followMap);
+  const gpsFullOverviewLine = L.polyline([], {
+    pane: "gpsBackgroundPane", color: "#73e0c1", weight: 2, opacity: 0.55,
+    dashArray: "4 5", interactive: false
+  }).addTo(overviewMap);
+
+  const gpsSegmentFollowLine = L.polyline([], {
+    pane: "gpsSegmentPane", color: "#ffd166", weight: 5, opacity: 0.95,
+    lineCap: "round", lineJoin: "round", interactive: false
+  }).addTo(followMap);
+  const gpsSegmentOverviewLine = L.polyline([], {
+    pane: "gpsSegmentPane", color: "#ffd166", weight: 3, opacity: 0.90,
+    lineCap: "round", lineJoin: "round", interactive: false
+  }).addTo(overviewMap);
+
+  // A wide, nearly invisible hit line makes it easy to hover the GPS path
+  // without creating thousands of individual Leaflet markers.
+  const gpsHitLine = L.polyline([], {
+    pane: "gpsHitPane", color: "#ffffff", weight: 14, opacity: 0.01,
+    interactive: true
+  }).addTo(followMap);
+  const gpsHoverTooltip = L.tooltip({
+    className: "gpsInfoTooltip", direction: "top", offset: [0, -7], opacity: 1
+  });
+
+  const stopoverFollowLayer = L.geoJSON(null, {
+    pane: "stopoverPane",
+    style: () => ({
+      color: "#ff9f43", weight: 2, opacity: 0.90,
+      fillColor: "#ff9f43", fillOpacity: 0.16
+    }),
+    onEachFeature: (feature, layer) => {
+      layer.bindTooltip(stopoverTooltipHtml(feature), {
+        sticky: true, className: "stopoverInfoTooltip", opacity: 1
+      });
+    }
+  }).addTo(followMap);
+  const stopoverOverviewLayer = L.geoJSON(null, {
+    pane: "stopoverPane",
+    interactive: false,
+    style: () => ({
+      color: "#ff9f43", weight: 1.5, opacity: 0.78,
+      fillColor: "#ff9f43", fillOpacity: 0.11
+    })
+  }).addTo(overviewMap);
+
   const groupedFiles = new Map();
   const trackCache = new Map();
+  const gpsTracksByBird = new Map();
+
+  // Always read migration data from the dedicated GitHub repository. This
+  // also works when index.html is hosted elsewhere or opened from another repo.
+  const MIGRATION_DATA_RAW = "https://raw.githubusercontent.com/jankowiakl/stork-migration-page/main/";
+  const GPS_DATA_URL = MIGRATION_DATA_RAW + "data_clear30m.txt";
+  const STOPOVER_DATA_URL = MIGRATION_DATA_RAW + "data_residence_all_buffors1km_25km_residence.gpkg";
+
+  let stopoverFeatures = [];
+  let currentGpsPoints = [];
+  let currentSegmentGpsPoints = [];
+  let gpsHitPoints = [];
+  let gpsLoadSummary = "GPS: loading…";
+  let stopoverLoadSummary = "Stopovers: loading…";
 
   let track = [];
   let birdId = null;
@@ -1335,6 +1555,364 @@ loopCurrentEl.checked = false;
     return lon;
   };
 
+  const escapeHtml = (value) => String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+  const splitTsvLine = (line) => {
+    const values = [];
+    let value = "";
+    let quoted = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (quoted && line[i + 1] === '"') {
+          value += '"';
+          i++;
+        } else {
+          quoted = !quoted;
+        }
+      } else if (ch === "\t" && !quoted) {
+        values.push(value);
+        value = "";
+      } else {
+        value += ch;
+      }
+    }
+    values.push(value);
+    return values;
+  };
+
+  const parseGpsDateTime = (value) => {
+    const s = String(value || "").trim();
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?/);
+    if (!m) return null;
+    const ms = m[7] ? Math.round(Number("0." + m[7]) * 1000) : 0;
+    const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6], ms));
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  // data_clear30m.txt has an unlabelled leading row-number field: its header
+  // has 9 columns while every real data row has 10. Detecting that mismatch
+  // and dropping the first cell realigns id/time_agg/lon/lat/DateTime.
+  const parseGpsDataset = (text) => {
+    const lines = String(text || "").replace(/^\uFEFF/, "").split(/\r?\n/).filter(line => line.trim().length);
+    if (lines.length < 2) throw new Error("GPS TXT file is empty.");
+
+    const headers = splitTsvLine(lines[0]).map(x => x.trim());
+    const required = ["id", "time_agg", "countN", "lon", "lat", "DateTime", "Type"];
+    for (const name of required) {
+      if (!headers.includes(name)) throw new Error(`GPS TXT is missing column ${name}.`);
+    }
+
+    gpsTracksByBird.clear();
+    let pointCount = 0;
+    let shiftedRows = 0;
+
+    for (let i = 1; i < lines.length; i++) {
+      let cells = splitTsvLine(lines[i]);
+      if (cells.length === headers.length + 1) {
+        cells = cells.slice(1);
+        shiftedRows++;
+      }
+      if (cells.length < headers.length) continue;
+
+      const row = {};
+      headers.forEach((h, j) => { row[h] = cells[j]; });
+
+      const id = String(row.id || "").trim();
+      const lon = Number(row.lon);
+      const lat = Number(row.lat);
+      if (!id || !Number.isFinite(lon) || !Number.isFinite(lat) || Math.abs(lat) > 90 || Math.abs(lon) > 180) continue;
+
+      const dt = parseGpsDateTime(row.DateTime);
+      const timeAgg = Number(row.time_agg);
+      const countN = Number(row.countN);
+      const point = {
+        id,
+        lon,
+        lat,
+        dt,
+        dateTimeRaw: String(row.DateTime || "").trim(),
+        timeAgg: Number.isFinite(timeAgg) ? timeAgg : null,
+        countN: Number.isFinite(countN) ? countN : null,
+        type: String(row.Type || "").trim()
+      };
+
+      if (!gpsTracksByBird.has(id)) gpsTracksByBird.set(id, []);
+      gpsTracksByBird.get(id).push(point);
+      pointCount++;
+    }
+
+    for (const points of gpsTracksByBird.values()) {
+      points.sort((a, b) => {
+        const ta = a.dt ? a.dt.getTime() : (a.timeAgg != null ? a.timeAgg * 1000 : Infinity);
+        const tb = b.dt ? b.dt.getTime() : (b.timeAgg != null ? b.timeAgg * 1000 : Infinity);
+        return ta - tb;
+      });
+    }
+
+    if (!pointCount) throw new Error("No valid GPS points were found in the TXT file.");
+    return { pointCount, birdCount: gpsTracksByBird.size, shiftedRows };
+  };
+
+  const updateBackgroundDataStatus = () => {
+    if (backgroundDataStatusEl) {
+      backgroundDataStatusEl.textContent = `${gpsLoadSummary} • ${stopoverLoadSummary}`;
+    }
+  };
+
+  const formatMapDateTime = (value) => {
+    const raw = value instanceof Date ? value.toISOString() : String(value || "").trim();
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+    if (!m) return "—";
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return `${m[3]} ${months[Number(m[2]) - 1]} ${m[1]} · ${m[4]}:${m[5]}`;
+  };
+
+  const stopoverDays = (props) => {
+    const start = Date.parse(props.time_start || "");
+    const end = Date.parse(props.time_end || "");
+    let days = (Number.isFinite(start) && Number.isFinite(end) && end >= start)
+      ? (end - start) / 86400000
+      : NaN;
+    if (!Number.isFinite(days)) {
+      const durationSeconds = Number(props.duration);
+      if (Number.isFinite(durationSeconds)) days = durationSeconds / 86400;
+    }
+    if (!Number.isFinite(days)) return "—";
+    const rounded = Math.round(days * 10) / 10;
+    return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)} days`;
+  };
+
+  const gpsTooltipHtml = (p) => {
+    return `<div class="mapTip">` +
+      `<div class="mapTipTitle">GPS position</div>` +
+      `<div class="mapTipTime">${escapeHtml(formatMapDateTime(p.dateTimeRaw || p.dt))}</div>` +
+      `<div class="mapTipRow"><span class="mapTipLabel">Latitude</span><span class="mapTipValue">${p.lat.toFixed(6)}</span></div>` +
+      `<div class="mapTipRow"><span class="mapTipLabel">Longitude</span><span class="mapTipValue">${p.lon.toFixed(6)}</span></div>` +
+      `</div>`;
+  };
+
+  function stopoverTooltipHtml(feature) {
+    const props = feature && feature.properties ? feature.properties : {};
+    const start = formatMapDateTime(props.time_start);
+    const end = formatMapDateTime(props.time_end);
+    const days = stopoverDays(props);
+    return `<div class="mapTip">` +
+      `<div class="mapTipTitle">Stopover</div>` +
+      `<div class="mapTipRow"><span class="mapTipLabel">Start</span><span class="mapTipValue">${escapeHtml(start)}</span></div>` +
+      `<div class="mapTipRow"><span class="mapTipLabel">End</span><span class="mapTipValue">${escapeHtml(end)}</span></div>` +
+      `<div class="mapTipDuration">Duration: ${escapeHtml(days)}</div>` +
+      `</div>`;
+  }
+
+  const featureMatchesBird = (feature, id) => {
+    if (!feature || !feature.properties || !id) return false;
+    const target = String(id).trim().toLowerCase();
+    const entries = Object.entries(feature.properties);
+    const lower = new Map(entries.map(([k, v]) => [String(k).toLowerCase(), v]));
+    const preferred = ["id", "bird_id", "birdid", "individual_id", "individual", "animal_id", "name", "time_agg"];
+    for (const key of preferred) {
+      if (lower.has(key) && String(lower.get(key) ?? "").trim().toLowerCase() === target) return true;
+    }
+    return entries.some(([, value]) => {
+      if (value == null || typeof value === "object") return false;
+      return String(value).trim().toLowerCase() === target;
+    });
+  };
+
+  const refreshGpsHitLine = () => {
+    if (showGpsTrackEl.checked) gpsHitPoints = currentGpsPoints;
+    else if (showPhotoGpsSegmentEl.checked) gpsHitPoints = currentSegmentGpsPoints;
+    else gpsHitPoints = [];
+
+    gpsHitLine.setLatLngs(gpsHitPoints.map(p => [p.lat, p.lon]));
+    try { if (followMap.hasLayer(gpsHoverTooltip)) followMap.removeLayer(gpsHoverTooltip); } catch(e) {}
+  };
+
+  const updateCurrentGpsSegment = (index = segIndex) => {
+    currentSegmentGpsPoints = [];
+    if (!showPhotoGpsSegmentEl.checked || !birdId || track.length < 2) {
+      gpsSegmentFollowLine.setLatLngs([]);
+      gpsSegmentOverviewLine.setLatLngs([]);
+      refreshGpsHitLine();
+      return;
+    }
+
+    const i = Math.max(0, Math.min(index, track.length - 2));
+    const a = track[i];
+    const b = track[i + 1];
+    const gps = gpsTracksByBird.get(birdId) || [];
+
+    if (a.dt && b.dt) {
+      const lo = Math.min(a.dt.getTime(), b.dt.getTime());
+      const hi = Math.max(a.dt.getTime(), b.dt.getTime());
+      currentSegmentGpsPoints = gps.filter(p => p.dt && p.dt.getTime() >= lo && p.dt.getTime() <= hi);
+    }
+
+    // The highlighted segment must consist only of points from the repository
+    // GPS file. Do not fall back to a straight photo-to-photo line when the
+    // GitHub data has not loaded or the interval contains no GPS points.
+    const coords = currentSegmentGpsPoints.map(p => [p.lat, p.lon]);
+    const deduped = coords.filter((xy, pos, arr) => {
+      if (pos === 0) return true;
+      const prev = arr[pos - 1];
+      return xy[0] !== prev[0] || xy[1] !== prev[1];
+    });
+    const segmentLatLngs = deduped.length >= 2 ? deduped : [];
+    gpsSegmentFollowLine.setLatLngs(segmentLatLngs);
+    gpsSegmentOverviewLine.setLatLngs(segmentLatLngs);
+    refreshGpsHitLine();
+  };
+
+  const renderBackgroundLayers = (id) => {
+    currentGpsPoints = id ? (gpsTracksByBird.get(id) || []) : [];
+    const gpsLatLngs = currentGpsPoints.map(p => [p.lat, p.lon]);
+    if (showGpsTrackEl.checked) {
+      gpsFullFollowLine.setLatLngs(gpsLatLngs);
+      gpsFullOverviewLine.setLatLngs(gpsLatLngs);
+    } else {
+      gpsFullFollowLine.setLatLngs([]);
+      gpsFullOverviewLine.setLatLngs([]);
+    }
+
+    stopoverFollowLayer.clearLayers();
+    stopoverOverviewLayer.clearLayers();
+    const selectedStopovers = id ? stopoverFeatures.filter(feature => featureMatchesBird(feature, id)) : [];
+    if (showStopoversEl.checked && selectedStopovers.length) {
+      stopoverFollowLayer.addData(selectedStopovers);
+      stopoverOverviewLayer.addData(selectedStopovers);
+    }
+
+    if (backgroundDataStatusEl && id) {
+      backgroundDataStatusEl.textContent = `${gpsLoadSummary} • ${stopoverLoadSummary} • Selected ${id}: ${currentGpsPoints.length.toLocaleString()} GPS points / ${selectedStopovers.length} stopovers`;
+    } else {
+      updateBackgroundDataStatus();
+    }
+
+    updateCurrentGpsSegment(segIndex);
+  };
+
+  const nearestGpsPoint = (latlng, points) => {
+    if (!points.length) return null;
+    const cosLat = Math.cos(latlng.lat * Math.PI / 180);
+    let best = null;
+    let bestD2 = Infinity;
+    for (const p of points) {
+      let dx = p.lon - latlng.lng;
+      if (dx > 180) dx -= 360;
+      if (dx < -180) dx += 360;
+      dx *= cosLat;
+      const dy = p.lat - latlng.lat;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < bestD2) {
+        bestD2 = d2;
+        best = p;
+      }
+    }
+    return best;
+  };
+
+  let lastGpsHoverAt = 0;
+  gpsHitLine.on("mousemove", (e) => {
+    const now = performance.now();
+    if (now - lastGpsHoverAt < 45) return;
+    lastGpsHoverAt = now;
+    const point = nearestGpsPoint(e.latlng, gpsHitPoints);
+    if (!point) return;
+    gpsHoverTooltip.setLatLng(e.latlng).setContent(gpsTooltipHtml(point));
+    if (!followMap.hasLayer(gpsHoverTooltip)) gpsHoverTooltip.addTo(followMap);
+  });
+  gpsHitLine.on("mouseout", () => {
+    try { if (followMap.hasLayer(gpsHoverTooltip)) followMap.removeLayer(gpsHoverTooltip); } catch(e) {}
+  });
+
+  const loadGpsDataset = async () => {
+    try {
+      const response = await fetch(GPS_DATA_URL, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const parsed = parseGpsDataset(await response.text());
+      gpsLoadSummary = `GPS: ${parsed.pointCount.toLocaleString()} points / ${parsed.birdCount} birds`;
+      updateBackgroundDataStatus();
+      renderBackgroundLayers(birdId);
+      if (birdId && currentGpsPoints.length) {
+        const boundsPoints = track.map(p => [p.lat, p.lon]).concat(currentGpsPoints.map(p => [p.lat, p.lon]));
+        if (boundsPoints.length >= 2) overviewMap.fitBounds(boundsPoints, { padding: [12,12] });
+      }
+    } catch (error) {
+      gpsLoadSummary = `GPS: failed (${error.message})`;
+      updateBackgroundDataStatus();
+      console.error("GPS data load failed", error);
+    }
+  };
+
+  const loadStopoverDataset = async () => {
+    let geoPackage = null;
+    try {
+      const gpLib = window.GeoPackage;
+      if (!gpLib) throw new Error("GeoPackage library not available");
+      if (typeof gpLib.setSqljsWasmLocateFile === "function") {
+        gpLib.setSqljsWasmLocateFile(file => `https://unpkg.com/@ngageoint/geopackage/dist/${file}`);
+      }
+
+      const response = await fetch(STOPOVER_DATA_URL, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      const manager = gpLib.GeoPackageManager || gpLib.GeoPackageAPI;
+      if (!manager || typeof manager.open !== "function") throw new Error("GeoPackage open API not available");
+      geoPackage = await manager.open(bytes);
+
+      const features = [];
+      const tables = geoPackage.getFeatureTables();
+      for (const table of tables) {
+        const featureDao = geoPackage.getFeatureDao(table);
+        const info = geoPackage.getInfoForTable(featureDao);
+        const iterator = featureDao.queryForEach();
+        for (const row of iterator) {
+          const featureRow = featureDao.getRow(row);
+          const featureGeometry = featureRow.geometry;
+          if (!featureGeometry || !featureGeometry.geometry) continue;
+          const geometry = featureGeometry.geometry.toGeoJSON();
+          const properties = { _table: table };
+          const geometryColumnName = featureRow.geometryColumn && featureRow.geometryColumn.name;
+          for (const key of Object.keys(featureRow.values || {})) {
+            if (key === geometryColumnName) continue;
+            const column = info && info.columnMap ? info.columnMap[key] : null;
+            const displayName = column && column.displayName ? column.displayName : key;
+            properties[displayName] = featureRow.values[key];
+          }
+          features.push({ type: "Feature", geometry, properties });
+        }
+        if (iterator && typeof iterator.close === "function") iterator.close();
+      }
+
+      stopoverFeatures = features;
+      const stopoverBirds = new Set(features.map(f => String(f.properties && f.properties.id || "").trim()).filter(Boolean));
+      stopoverLoadSummary = `Stopovers: ${features.length} polygons / ${stopoverBirds.size} birds`;
+      updateBackgroundDataStatus();
+      renderBackgroundLayers(birdId);
+    } catch (error) {
+      stopoverLoadSummary = `Stopovers: failed (${error.message})`;
+      updateBackgroundDataStatus();
+      console.error("Stopover data load failed", error);
+    } finally {
+      try { if (geoPackage && typeof geoPackage.close === "function") geoPackage.close(); } catch(e) {}
+    }
+  };
+
+  const loadBackgroundData = () => {
+    updateBackgroundDataStatus();
+    Promise.allSettled([loadGpsDataset(), loadStopoverDataset()]);
+  };
+
+  showGpsTrackEl.addEventListener("change", () => renderBackgroundLayers(birdId));
+  showPhotoGpsSegmentEl.addEventListener("change", () => renderBackgroundLayers(birdId));
+  showStopoversEl.addEventListener("change", () => renderBackgroundLayers(birdId));
+
   const ensureLibs = () => {
     return (window.L && window.exifr);
   };
@@ -1362,6 +1940,96 @@ loopCurrentEl.checked = false;
     rafId = null;
     lastTs = null;
   };
+
+  const currentPhotoIndex = () => {
+    if (!track.length) return -1;
+    if (track.length === 1) return 0;
+    const base = Math.max(0, Math.min(segIndex, track.length - 1));
+    return Math.min(track.length - 1, base + (segT >= 0.5 ? 1 : 0));
+  };
+
+  const updatePhotoNavButtons = (index = currentPhotoIndex()) => {
+    const hasPhotos = track.length > 0 && index >= 0;
+    prevPhotoBtn.disabled = !hasPhotos || index <= 0;
+    nextPhotoBtn.disabled = !hasPhotos || index >= track.length - 1;
+  };
+
+  const showPhotoAtIndex = (requestedIndex) => {
+    if (!track.length) return;
+    const index = Math.max(0, Math.min(requestedIndex, track.length - 1));
+    const lastIndex = track.length - 1;
+    const point = track[index];
+    const next = index < lastIndex ? track[index + 1] : null;
+
+    stopAnim();
+    playBtn.disabled = track.length < 2;
+    pauseBtn.disabled = true;
+    syncSliderPlayPause();
+
+    segIndex = (index >= lastIndex && lastIndex > 0) ? lastIndex - 1 : index;
+    segT = (index >= lastIndex && lastIndex > 0) ? 1 : -1;
+    lastTs = null;
+    lastFollowMove = 0;
+
+    const hold = Math.max(0, parseFloat(holdSecondsEl.value || "1.0"));
+    const leg = Math.max(0.3, parseFloat(legSecondsEl.value || "3.0"));
+    currentProgress = index * (hold + leg);
+    const sliderMax = Number(timeSlider.max) || currentProgress;
+    timeSlider.value = Math.min(currentProgress, sliderMax);
+
+    const latlng = [point.lat, point.lon];
+    overviewMarker.setLatLng(latlng);
+    followMarker.setLatLng(latlng);
+    followFixed = track.slice(0, index + 1).map(p => [p.lat, p.lon]);
+    followLine.setLatLngs(followFixed);
+
+    imgA.src = point.url;
+    imgB.src = next ? next.url : "";
+    imgA.style.opacity = 1;
+    imgB.style.opacity = 0;
+
+    metaCoords.textContent = `Lat/Lon: ${point.lat.toFixed(5)}, ${point.lon.toFixed(5)}`;
+    metaTime.textContent = `Time: ${fmtTime(point.dt)}`;
+    if (mapTimeBadge) mapTimeBadge.textContent = fmtTime(point.dt);
+
+    const segmentIndex = Math.min(index, Math.max(0, track.length - 2));
+    updateCurrentGpsSegment(segmentIndex);
+    updatePhotoNavButtons(index);
+
+    const zoom = followMap.getZoom();
+    followMap.setView(latlng, zoom, { animate: true, duration: 0.2 });
+    syncModalPhotos();
+  };
+
+  prevPhotoBtn.addEventListener("click", () => {
+    const index = currentPhotoIndex();
+    if (index > 0) showPhotoAtIndex(index - 1);
+  });
+  nextPhotoBtn.addEventListener("click", () => {
+    const index = currentPhotoIndex();
+    if (index >= 0 && index < track.length - 1) showPhotoAtIndex(index + 1);
+  });
+
+  let photoNavHideTimer = null;
+  const revealPhotoNav = () => {
+    if (!photoStageEl) return;
+    if (photoNavHideTimer) clearTimeout(photoNavHideTimer);
+    photoNavHideTimer = null;
+    photoStageEl.classList.add("navControlsVisible");
+  };
+  const hidePhotoNavAfterDelay = () => {
+    if (!photoStageEl) return;
+    if (photoNavHideTimer) clearTimeout(photoNavHideTimer);
+    photoNavHideTimer = setTimeout(() => {
+      photoStageEl.classList.remove("navControlsVisible");
+      photoNavHideTimer = null;
+    }, 3000);
+  };
+  if (photoStageEl) {
+    photoStageEl.addEventListener("mouseenter", revealPhotoNav);
+    photoStageEl.addEventListener("mousemove", revealPhotoNav);
+    photoStageEl.addEventListener("mouseleave", hidePhotoNavAfterDelay);
+  }
 
   const idsSorted = () => Array.from(groupedFiles.keys()).sort();
 
@@ -1421,9 +2089,11 @@ loopCurrentEl.checked = false;
 
     cleanupObjectURLs();
     track = [];
+    updatePhotoNavButtons(-1);
     birdId = null;
     segIndex = 0; segT = 0;
     clearMaps();
+    renderBackgroundLayers(null);
 
     imgA.removeAttribute("src");
     imgB.removeAttribute("src");
@@ -1467,9 +2137,11 @@ loopCurrentEl.checked = false;
 
     cleanupObjectURLs();
     track = [];
+    updatePhotoNavButtons(-1);
     birdId = null;
     segIndex = 0; segT = 0;
     clearMaps();
+    renderBackgroundLayers(null);
 
     imgA.removeAttribute("src");
     imgB.removeAttribute("src");
@@ -1543,8 +2215,11 @@ loopCurrentEl.checked = false;
 
   loadGithubBtn.addEventListener("click", loadGithubFiles);
 
-  // Automatically load from GitHub on page load
-  window.addEventListener("load", loadGithubFiles);
+  // Automatically load photos, full GPS tracks and stopovers on page load.
+  window.addEventListener("load", () => {
+    loadBackgroundData();
+    loadGithubFiles();
+  });
 
   birdSelect.addEventListener("change", async () => {
     const id = birdSelect.value;
@@ -1558,6 +2233,12 @@ loopCurrentEl.checked = false;
     playBtn.disabled = true;
     pauseBtn.disabled = true;
     resetBtn.disabled = loading ? true : (track.length === 0);
+    if (loading) {
+      prevPhotoBtn.disabled = true;
+      nextPhotoBtn.disabled = true;
+    } else {
+      updatePhotoNavButtons();
+    }
     syncSliderPlayPause();
   };
 
@@ -1631,6 +2312,9 @@ loopCurrentEl.checked = false;
 
     if (birdSelect.value !== id) birdSelect.value = id;
 
+    segIndex = 0;
+    renderBackgroundLayers(id);
+
     if (track.length < 1) {
       playBtn.disabled = true;
       pauseBtn.disabled = true;
@@ -1647,7 +2331,10 @@ loopCurrentEl.checked = false;
 
     overviewLine.setLatLngs(latlngs);
     overviewMarker.setLatLng(start);
-    if (track.length >= 2) overviewMap.fitBounds(latlngs, { padding: [12,12] });
+    const overviewLatLngs = showGpsTrackEl.checked && currentGpsPoints.length
+      ? latlngs.concat(currentGpsPoints.map(p => [p.lat, p.lon]))
+      : latlngs;
+    if (overviewLatLngs.length >= 2) overviewMap.fitBounds(overviewLatLngs, { padding: [12,12] });
     else overviewMap.setView(start, 3);
 
     const z = Math.max(2, Math.min(18, parseInt(followZoomEl.value||"12",10)));
@@ -1754,6 +2441,8 @@ loopCurrentEl.checked = false;
 
     const z = Math.max(2, Math.min(18, parseInt(followZoomEl.value||"12",10)));
     followMap.setView(start, z, {animate:false});
+    updateCurrentGpsSegment(0);
+    updatePhotoNavButtons(0);
   };
 
   resetBtn.addEventListener("click", () => {
@@ -1835,6 +2524,7 @@ loopCurrentEl.checked = false;
 
       segIndex += 1;
       segT = -1;
+      updatePhotoNavButtons(Math.min(segIndex, track.length - 1));
 
       if (segIndex >= track.length - 1) {
         if (loopAllEl.checked) {
@@ -1859,6 +2549,8 @@ loopCurrentEl.checked = false;
         setStatus(`Finished animation for ${birdId}.`);
         return;
       }
+
+      updateCurrentGpsSegment(segIndex);
 
       imgA.src = track[segIndex].url;
       imgB.src = track[segIndex+1].url;
@@ -1939,12 +2631,14 @@ loopCurrentEl.checked = false;
 
     segIndex = phaseIndex;
     segT = segTLocal;
+    updateCurrentGpsSegment(segIndex);
 
     followFixed = track.slice(0, segIndex + 1).map(p => [p.lat, p.lon]);
 
     const a = track[segIndex];
     const b = track[segIndex + 1] || a;
     const renderT = (segTLocal < 0 ? 0 : segTLocal);
+    updatePhotoNavButtons(Math.min(track.length - 1, segIndex + (renderT >= 0.5 ? 1 : 0)));
     const lat = lerp(a.lat, b.lat, renderT);
     const lon = lerpLonShortest(a.lon, b.lon, renderT);
 

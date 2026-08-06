@@ -677,6 +677,8 @@
         <div class="checkRow">
           <label title="Loop the currently loaded bird forever"><input id="loopCurrent" type="checkbox"> Loop this bird</label>
           <label title="Auto-switch to the next bird, and loop through all birds in the folder"><input id="loopAll" type="checkbox" checked> Loop all birds</label>
+          <label title="Show the complete GPS migration path supplied by the data repository"><input id="showMigrationPath" type="checkbox" checked> Migration path</label>
+          <label title="Show stopover sites supplied by the data repository"><input id="showStopovers" type="checkbox" checked> Stopovers</label>
         </div>
 
         <div class="row">
@@ -781,6 +783,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sql.js@1.11.0/dist/sql-wasm.js"></script>
 
 <script>
 (() => {
@@ -805,6 +808,8 @@
 
   const loopCurrentEl = el("loopCurrent");
   const loopAllEl     = el("loopAll");
+  const showMigrationPathEl = el("showMigrationPath");
+  const showStopoversEl = el("showStopovers");
 
   const musicSelectEl = el("musicSelect");
   const musicVolEl    = el("musicVol");
@@ -1273,6 +1278,138 @@ loopCurrentEl.checked = false;
     fillOpacity: 0.95
   }).addTo(followMap);
 
+  // Optional reference data. These layers are deliberately independent of the
+  // animated EXIF line, so the original photo-location animation is unchanged.
+  const referenceLayers = {
+    followPath: L.layerGroup().addTo(followMap),
+    followStops: L.layerGroup().addTo(followMap),
+    overviewPath: L.layerGroup().addTo(overviewMap),
+    overviewStops: L.layerGroup().addTo(overviewMap)
+  };
+  const referenceData = { paths: [], stopovers: [], loaded: false, message: "Loading reference data…" };
+
+  const normaliseId = (value) => String(value == null ? "" : value).trim().toLowerCase();
+  const featureMatchesBird = (feature, id) => {
+    const wanted = normaliseId(id);
+    const props = feature.properties || {};
+    const preferred = ["id", "bird_id", "birdid", "individual_id", "individual", "name", "bird"];
+    const key = Object.keys(props).find(k => preferred.includes(k.toLowerCase()));
+    if (key) return normaliseId(props[key]) === wanted;
+    return Object.values(props).some(value => normaliseId(value) === wanted);
+  };
+
+  const clearReferenceLayers = () => Object.values(referenceLayers).forEach(layer => layer.clearLayers());
+  const renderReferenceData = (id) => {
+    clearReferenceLayers();
+    if (!id || !referenceData.loaded) return;
+    const paths = referenceData.paths.filter(f => featureMatchesBird(f, id));
+    const stops = referenceData.stopovers.filter(f => featureMatchesBird(f, id));
+    const pathStyle = { color: "#ffb347", weight: 3, opacity: 0.9, radius: 4, fillOpacity: 0.75 };
+    const stopStyle = { color: "#39d98a", weight: 2, opacity: 0.95, radius: 7, fillColor: "#39d98a", fillOpacity: 0.35 };
+    const add = (features, a, b, style) => {
+      const options = { style: () => style, pointToLayer: (_f, ll) => L.circleMarker(ll, style) };
+      L.geoJSON(features, options).addTo(a);
+      L.geoJSON(features, options).addTo(b);
+    };
+    if (showMigrationPathEl.checked) {
+      add(paths, referenceLayers.followPath, referenceLayers.overviewPath, pathStyle);
+      // Some path datasets contain one Point feature per GPS fix rather than a
+      // LineString. Join those fixes in file/time order to make the route clear.
+      const pointRoute = paths.filter(f => f.geometry && f.geometry.type === "Point")
+        .map(f => [f.geometry.coordinates[1], f.geometry.coordinates[0]]);
+      if (pointRoute.length > 1) {
+        L.polyline(pointRoute, pathStyle).addTo(referenceLayers.followPath);
+        L.polyline(pointRoute, pathStyle).addTo(referenceLayers.overviewPath);
+      }
+    }
+    if (showStopoversEl.checked) add(stops, referenceLayers.followStops, referenceLayers.overviewStops, stopStyle);
+  };
+
+  // Decode the geometry types commonly stored in a GeoPackage (Point,
+  // LineString, Polygon, and their multi variants) without requiring a server.
+  const readWkb = (view, offset = 0) => {
+    const little = view.getUint8(offset) === 1;
+    let type = view.getUint32(offset + 1, little); offset += 5;
+    const hasZ = type >= 1000 && type < 2000;
+    type %= 1000;
+    const number = () => { const n = view.getFloat64(offset, little); offset += 8; return n; };
+    const point = () => { const p = [number(), number()]; if (hasZ) number(); return p; };
+    const points = () => { const n = view.getUint32(offset, little); offset += 4; return Array.from({length:n}, point); };
+    if (type === 1) return [{ type: "Point", coordinates: point() }, offset];
+    if (type === 2) return [{ type: "LineString", coordinates: points() }, offset];
+    if (type === 3) { const n=view.getUint32(offset,little); offset+=4; return [{type:"Polygon", coordinates:Array.from({length:n}, points)}, offset]; }
+    if (type >= 4 && type <= 7) {
+      const n=view.getUint32(offset,little); offset+=4; const geometries=[];
+      for (let i=0;i<n;i++) { const parsed=readWkb(view,offset); geometries.push(parsed[0]); offset=parsed[1]; }
+      if (type === 7) return [{type:"GeometryCollection", geometries}, offset];
+      const names={4:"MultiPoint",5:"MultiLineString",6:"MultiPolygon"};
+      return [{type:names[type], coordinates:geometries.map(g=>g.coordinates)}, offset];
+    }
+    throw new Error(`Unsupported WKB geometry type ${type}`);
+  };
+
+  const geoPackageGeometry = (bytes) => {
+    const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    if (data[0] !== 0x47 || data[1] !== 0x50) return readWkb(new DataView(data.buffer, data.byteOffset, data.byteLength))[0];
+    const envelopeDoubles = [0,4,6,6,8][(data[3] >> 1) & 7] || 0;
+    const offset = 8 + envelopeDoubles * 8;
+    return readWkb(new DataView(data.buffer, data.byteOffset + offset, data.byteLength - offset))[0];
+  };
+
+  const parseGeoPackage = async (buffer) => {
+    if (!window.initSqlJs) throw new Error("sql.js did not load");
+    const SQL = await window.initSqlJs({ locateFile: file => `https://cdn.jsdelivr.net/npm/sql.js@1.11.0/dist/${file}` });
+    const db = new SQL.Database(new Uint8Array(buffer));
+    const tables = db.exec("SELECT table_name, column_name FROM gpkg_geometry_columns");
+    const features = [];
+    for (const [table, geometryColumn] of (tables[0] ? tables[0].values : [])) {
+      const safeTable = String(table).replaceAll('"','""');
+      const result = db.exec(`SELECT * FROM "${safeTable}"`)[0];
+      if (!result) continue;
+      const geomIndex = result.columns.indexOf(geometryColumn);
+      for (const row of result.values) {
+        try {
+          const properties = Object.fromEntries(result.columns.map((name,i) => [name, i === geomIndex ? undefined : row[i]]));
+          delete properties[geometryColumn];
+          features.push({ type:"Feature", properties, geometry:geoPackageGeometry(row[geomIndex]) });
+        } catch (e) { console.warn("Skipping invalid GeoPackage feature", e); }
+      }
+    }
+    db.close();
+    return features;
+  };
+
+  const loadReferenceData = async () => {
+    try {
+      const api = "https://api.github.com/repos/jankowiakl/stork-migration-page";
+      const repoResponse = await fetch(api);
+      if (!repoResponse.ok) throw new Error(`GitHub API ${repoResponse.status}`);
+      const repo = await repoResponse.json();
+      const treeResponse = await fetch(`${api}/git/trees/${encodeURIComponent(repo.default_branch)}?recursive=1`);
+      if (!treeResponse.ok) throw new Error(`GitHub tree API ${treeResponse.status}`);
+      const tree = await treeResponse.json();
+      const files = tree.tree.filter(item => item.type === "blob" && /\.(gpkg|geojson|json)$/i.test(item.path));
+      for (const file of files) {
+        const raw = `https://raw.githubusercontent.com/jankowiakl/stork-migration-page/${encodeURIComponent(repo.default_branch)}/${file.path.split('/').map(encodeURIComponent).join('/')}`;
+        const response = await fetch(raw);
+        if (!response.ok) continue;
+        const features = /\.gpkg$/i.test(file.path)
+          ? await parseGeoPackage(await response.arrayBuffer())
+          : ((await response.json()).features || []);
+        const target = /stop|site/i.test(file.path) ? referenceData.stopovers : referenceData.paths;
+        target.push(...features);
+      }
+      referenceData.loaded = true;
+      referenceData.message = `${referenceData.paths.length} path and ${referenceData.stopovers.length} stopover features`;
+      renderReferenceData(birdId);
+    } catch (error) {
+      referenceData.message = `Reference data unavailable: ${error.message}`;
+      console.error(referenceData.message);
+    }
+  };
+  showMigrationPathEl.addEventListener("change", () => renderReferenceData(birdId));
+  showStopoversEl.addEventListener("change", () => renderReferenceData(birdId));
+
   const groupedFiles = new Map();
   const trackCache = new Map();
 
@@ -1544,7 +1681,10 @@ loopCurrentEl.checked = false;
   loadGithubBtn.addEventListener("click", loadGithubFiles);
 
   // Automatically load from GitHub on page load
-  window.addEventListener("load", loadGithubFiles);
+  window.addEventListener("load", () => {
+    loadReferenceData();
+    loadGithubFiles();
+  });
 
   birdSelect.addEventListener("change", async () => {
     const id = birdSelect.value;
@@ -1591,6 +1731,7 @@ loopCurrentEl.checked = false;
     birdId = id;
     metaBird.textContent = `Bird: ${birdId}`;
     clearMaps();
+    renderReferenceData(id);
 
     if (trackCache.has(id)) {
       const cached = trackCache.get(id);

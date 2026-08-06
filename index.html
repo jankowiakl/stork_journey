@@ -804,31 +804,6 @@
           <label title="Show the complete GPS track for the selected bird"><input id="showGpsTrack" type="checkbox" checked> Full GPS track</label>
           <label title="Highlight the GPS positions recorded between the two currently animated photos"><input id="showPhotoGpsSegment" type="checkbox" checked> GPS between photos</label>
           <label title="Show stopover polygons for the selected bird"><input id="showStopovers" type="checkbox" checked> Stopovers</label>
-<<<<<<< HEAD
-=======
-        </div>
-        <div class="miniNote" id="backgroundDataStatus">GPS &amp; stopovers: loading automatically…</div>
-
-        <div class="row">
-          <div>
-            <label>Background music</label>
-            <select id="musicSelect">
-              <option value="off" selected>Off</option>
-              <option value="sample2">Relaxing sample 1 (piano)</option>
-              <option value="sample1">Relaxing sample 2 (piano)</option>
-              <option value="sample3">Relaxing sample 3 (piano)</option>
-              <option value="somafm_drone">SomaFM — Drone Zone (live ambient)</option>
-              <option value="somafm_spacestation">SomaFM — Space Station Soma (live ambient)</option>
-              <option value="somafm_synphaera">SomaFM — Synphaera (live ambient/space)</option>
-              <option value="random_somafm">Random live station (SomaFM)</option>
-              <option value="upload">Upload your own</option>
-            </select>
-          </div>
-          <div>
-            <label>Volume</label>
-            <input id="musicVol" type="range" min="0" max="1" step="0.01" value="0.35" />
-          </div>
->>>>>>> 7061555eda06dac2edb3a486ac19aae9c0cdf3d1
         </div>
         <div class="miniNote" id="backgroundDataStatus">GPS &amp; stopovers: loading automatically…</div>
 
@@ -2467,10 +2442,7 @@ loopCurrentEl.checked = false;
     const z = Math.max(2, Math.min(18, parseInt(followZoomEl.value||"12",10)));
     followMap.setView(start, z, {animate:false});
     updateCurrentGpsSegment(0);
-<<<<<<< HEAD
     updatePhotoNavButtons(0);
-=======
->>>>>>> 7061555eda06dac2edb3a486ac19aae9c0cdf3d1
   };
 
   resetBtn.addEventListener("click", () => {

@@ -518,12 +518,14 @@
       padding: 12px;
       background: rgba(0,0,0,0.28);
       opacity: 0;
+      pointer-events: none;
       transition: opacity 0.2s ease-in-out;
       z-index: 10;
     }
 
     .photoStage:hover #sliderOverlay {
       opacity: 1;
+      pointer-events: auto;
     }
 
     #sliderOverlay input[type="range"] {
@@ -593,12 +595,24 @@
   #metaTime, #metaCoords { font-size: 18px; }
 }
 
-/* Touch devices: slider overlay should be visible (no hover) */
+/* Touch devices: reveal photo controls on activity, then fade them after 3s */
 @media (hover: none) {
-  #sliderOverlay { opacity: 1; }
-  .photoStage:hover #sliderOverlay { opacity: 1; }
-  .photoNav { opacity: .62; pointer-events: auto; }
-  .photoNav:disabled { opacity: .10 !important; }
+  #sliderOverlay,
+  .photoStage:hover #sliderOverlay {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .photoNav { opacity: 0; pointer-events: none; }
+  .photoNav:disabled { opacity: 0 !important; }
+  .photoStage.touchControlsVisible #sliderOverlay {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .photoStage.touchControlsVisible .photoNav {
+    opacity: .62;
+    pointer-events: auto;
+  }
+  .photoStage.touchControlsVisible .photoNav:disabled { opacity: .10 !important; }
 }
 
 
@@ -1483,6 +1497,22 @@ loopCurrentEl.checked = false;
   const trackCache = new Map();
   const gpsTracksByBird = new Map();
 
+  // The Repository Contents endpoint is limited to 1,000 entries per
+  // directory. Use the Git Trees endpoint so repositories with thousands of
+  // photos are listed completely.
+  const PHOTO_REPO = {
+    owner: "jankowiakl",
+    name: "stork-log-photos",
+    branch: "main"
+  };
+  const PHOTO_TREE_URL =
+    `https://api.github.com/repos/${PHOTO_REPO.owner}/${PHOTO_REPO.name}/git/trees/${PHOTO_REPO.branch}?recursive=1`;
+  const PHOTO_RAW_BASE =
+    `https://raw.githubusercontent.com/${PHOTO_REPO.owner}/${PHOTO_REPO.name}/${PHOTO_REPO.branch}/`;
+
+  const photoRawUrl = (path) =>
+    PHOTO_RAW_BASE + path.split("/").map(encodeURIComponent).join("/");
+
   // Always read migration data from the dedicated GitHub repository. This
   // also works when index.html is hosted elsewhere or opened from another repo.
   const MIGRATION_DATA_RAW = "https://raw.githubusercontent.com/jankowiakl/stork-migration-page/main/";
@@ -2011,24 +2041,42 @@ loopCurrentEl.checked = false;
   });
 
   let photoNavHideTimer = null;
+  let touchControlsHideTimer = null;
+  const touchPhotoControlsMQ = window.matchMedia("(hover: none)");
+  const isTouchPhotoUI = () => touchPhotoControlsMQ.matches;
   const revealPhotoNav = () => {
-    if (!photoStageEl) return;
+    if (!photoStageEl || isTouchPhotoUI()) return;
     if (photoNavHideTimer) clearTimeout(photoNavHideTimer);
     photoNavHideTimer = null;
     photoStageEl.classList.add("navControlsVisible");
   };
   const hidePhotoNavAfterDelay = () => {
-    if (!photoStageEl) return;
+    if (!photoStageEl || isTouchPhotoUI()) return;
     if (photoNavHideTimer) clearTimeout(photoNavHideTimer);
     photoNavHideTimer = setTimeout(() => {
       photoStageEl.classList.remove("navControlsVisible");
       photoNavHideTimer = null;
     }, 3000);
   };
+  const revealTouchPhotoControls = () => {
+    if (!photoStageEl || !isTouchPhotoUI()) return;
+    if (touchControlsHideTimer) clearTimeout(touchControlsHideTimer);
+    photoStageEl.classList.add("touchControlsVisible");
+    touchControlsHideTimer = setTimeout(() => {
+      photoStageEl.classList.remove("touchControlsVisible");
+      touchControlsHideTimer = null;
+    }, 3000);
+  };
   if (photoStageEl) {
     photoStageEl.addEventListener("mouseenter", revealPhotoNav);
     photoStageEl.addEventListener("mousemove", revealPhotoNav);
     photoStageEl.addEventListener("mouseleave", hidePhotoNavAfterDelay);
+    photoStageEl.addEventListener("pointerdown", (event) => {
+      if (event.pointerType === "touch" || isTouchPhotoUI()) revealTouchPhotoControls();
+    });
+    photoStageEl.addEventListener("pointermove", (event) => {
+      if (event.pointerType === "touch") revealTouchPhotoControls();
+    });
   }
 
   const idsSorted = () => Array.from(groupedFiles.keys()).sort();
@@ -2109,19 +2157,40 @@ loopCurrentEl.checked = false;
     loadLocalFiles();
   });
 
+  const readGpsFromFiles = async (files, onProgress = null) => {
+    const tmp = [];
+    let nextIndex = 0;
+    let completed = 0;
+    const workerCount = Math.min(6, files.length);
+
+    const worker = async () => {
+      while (nextIndex < files.length) {
+        const i = nextIndex++;
+        const { file, name, dt } = files[i];
+        try {
+          const gps = await window.exifr.gps(file);
+          if (gps && typeof gps.latitude === "number" && typeof gps.longitude === "number") {
+            tmp.push({ file, name, dt: dt || null, lat: gps.latitude, lon: gps.longitude });
+          }
+        } catch (e) {
+          // A damaged or temporarily unavailable photo should not block the rest.
+        } finally {
+          completed++;
+          if (onProgress && ((completed % 8) === 0 || completed === files.length)) {
+            onProgress(completed, tmp.length);
+          }
+        }
+      }
+    };
+
+    await Promise.all(Array.from({ length: workerCount }, () => worker()));
+    return tmp;
+  };
+
   const preloadTrack = async (id) => {
     if (trackCache.has(id)) return;
     const files = groupedFiles.get(id);
-    const tmp = [];
-    for (let i=0; i<files.length; i++) {
-      const { file, name, dt } = files[i];
-      try {
-        const gps = await window.exifr.gps(file);
-        if (gps && typeof gps.latitude === "number" && typeof gps.longitude === "number") {
-          tmp.push({ file, name, dt: dt || null, lat: gps.latitude, lon: gps.longitude });
-        }
-      } catch (e) {}
-    }
+    const tmp = await readGpsFromFiles(files);
     tmp.sort((a,b) => {
       const ta = a.dt ? a.dt.getTime() : Infinity;
       const tb = b.dt ? b.dt.getTime() : Infinity;
@@ -2157,19 +2226,35 @@ loopCurrentEl.checked = false;
     setStatus("Loading from GitHub repo...");
 
     try {
-      const res = await fetch('https://api.github.com/repos/jankowiakl/stork-log-photos/contents');
+      const res = await fetch(PHOTO_TREE_URL, {
+        cache: "no-store",
+        headers: { Accept: "application/vnd.github+json" }
+      });
       const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data && data.message ? data.message : `GitHub HTTP ${res.status}`);
+      }
+      if (!Array.isArray(data.tree)) {
+        throw new Error("GitHub returned an invalid repository file list.");
+      }
+      if (data.truncated) {
+        throw new Error(
+          "GitHub truncated the repository tree. Split photos into subfolders or use a generated manifest."
+        );
+      }
 
       let jpgCount = 0;
 
-      for (const item of data) {
-        if (item.type !== 'file' || !/\.(jpe?g)$/i.test(item.name)) continue;
+      for (const item of data.tree) {
+        if (item.type !== "blob" || !/\.(jpe?g)$/i.test(item.path || "")) continue;
         jpgCount++;
-        const id = parseBirdId(item.name);
+        const name = item.path.split("/").pop();
+        const id = parseBirdId(name);
         if (!id) continue;
-        const dt = parseDatetimeFromFilename(item.name);
+        const dt = parseDatetimeFromFilename(name);
         if (!groupedFiles.has(id)) groupedFiles.set(id, []);
-        groupedFiles.get(id).push({ file: item.download_url, name: item.name, dt });
+        groupedFiles.get(id).push({ file: photoRawUrl(item.path), name, dt });
       }
 
       for (const [id, arr] of groupedFiles.entries()) {
@@ -2196,6 +2281,7 @@ loopCurrentEl.checked = false;
       setStatus(
         `Loaded from GitHub repo:\n` +
         `- JPG files: ${jpgCount}\n` +
+        `- Repository entries checked: ${data.tree.length}\n` +
         `- Individuals detected: ${ids.length}\n\n` +
         `Pick an individual to load the track (EXIF GPS will be read from remote images).`
       );
@@ -2204,9 +2290,7 @@ loopCurrentEl.checked = false;
       if (ids.length > 0) {
         const firstId = ids[0];
         birdSelect.value = firstId;
-        await preloadTrack(firstId);
         await loadTrackFor(firstId, {autoplay: true});
-        ids.slice(1).forEach(preloadTrack);
       }
     } catch (err) {
       setStatus("Failed to load from GitHub: " + err.message);
@@ -2280,21 +2364,10 @@ loopCurrentEl.checked = false;
       setStatus(`Loaded bird ${id} from cache.\nUsable geotagged photos: ${track.length}`);
     } else {
       const files = groupedFiles.get(id);
-      const tmp = [];
       setStatus(`Reading EXIF GPS for ${id}… (0 / ${files.length})`);
-
-      for (let i=0; i<files.length; i++) {
-        const { file, name, dt } = files[i];
-        try {
-          const gps = await window.exifr.gps(file);
-          if (gps && typeof gps.latitude === "number" && typeof gps.longitude === "number") {
-            tmp.push({ file, name, dt: dt || null, lat: gps.latitude, lon: gps.longitude });
-          }
-        } catch (e) {}
-        if ((i % 8) === 0 || i === files.length - 1) {
-          setStatus(`Reading EXIF GPS for ${id}… (${i+1} / ${files.length})\nKept points: ${tmp.length}`);
-        }
-      }
+      const tmp = await readGpsFromFiles(files, (completed, kept) => {
+        setStatus(`Reading EXIF GPS for ${id}… (${completed} / ${files.length})\nKept points: ${kept}`);
+      });
 
       tmp.sort((a,b) => {
         const ta = a.dt ? a.dt.getTime() : Infinity;
@@ -2372,6 +2445,7 @@ loopCurrentEl.checked = false;
       sliderOverlay.style.display = "none";
     }
 
+    revealTouchPhotoControls();
     refreshMapSizes();
 
     if (autoplay && track.length >= 2) startPlayback();

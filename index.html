@@ -17,6 +17,8 @@
       --border: rgba(255,255,255,0.10);
       --shadow: 0 10px 30px rgba(0,0,0,.35);
       --radius: 16px;
+      --mobile-map-height: 50dvh;
+      --mobile-photo-height: 50dvh;
     }
 
     body {
@@ -39,7 +41,7 @@
 
     .wrap {
       display: grid;
-      grid-template-columns: 1.65fr 1.15fr;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: 14px;
       padding: 14px;
       height: calc(100vh - 62px);
@@ -122,6 +124,14 @@
       overflow: hidden;
       padding-right: 2px;
     }
+
+    /* Keep every card in its intended row even when Settings is fully hidden. */
+    #settingsCard { grid-row: 1; }
+    .photoCard { grid-row: 2; }
+    .metaCard { grid-row: 3; }
+    .side.settingsHidden { grid-template-rows: minmax(0, 1fr) auto; }
+    .side.settingsHidden .photoCard { grid-row: 1; }
+    .side.settingsHidden .metaCard { grid-row: 2; }
 
     .panel { padding: 14px; }
 
@@ -242,9 +252,9 @@
     }
     #settingsCard .status{ font-size: 11px; }
 
-    /* When hidden, make it a thin bar so it doesn't cover the photo */
+    /* When hidden, remove the whole settings card so the photo stays clear. */
     #settingsCard.settingsCollapsed{
-      max-height: 52px;
+      display: none !important;
     }
     #settingsCard.settingsCollapsed .status{
       display: none;
@@ -333,6 +343,32 @@
     }
     #birdSelectOverlay option { background: #0b1220; color: #fff; }
     #birdSelectOverlay:disabled { opacity: .55; cursor: default; }
+    .photoBirdPicker .settingsGear {
+      width: 30px;
+      min-width: 30px;
+      height: 30px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(7,11,20,.48);
+      color: rgba(255,255,255,.88);
+      font-size: 17px;
+      line-height: 1;
+    }
+    .photoBirdPicker .settingsGear:hover,
+    .photoBirdPicker .settingsGear:focus-visible {
+      background: rgba(119,209,255,.26);
+      color: #fff;
+    }
+
+    .lineStyleValue {
+      color: var(--accent);
+      font-weight: 750;
+      float: right;
+    }
 
     .metaGrid { 
       display: grid; 
@@ -770,8 +806,8 @@
     overflow: hidden;
   }
   body.mobileLock .card { border-radius: 0; }
-  body.mobileLock .mapStack { height: 50dvh; min-height: 0; }
-  body.mobileLock .photoCard { height: 50dvh; min-height: 0; }
+  body.mobileLock .mapStack { height: var(--mobile-map-height); min-height: 0; }
+  body.mobileLock .photoCard { height: var(--mobile-photo-height); min-height: 0; }
 
   /* Hide meta/settings in the main layout (they will live inside the panel) */
   body.mobileLock .metaCard,
@@ -893,6 +929,15 @@
               <option value="esriImagery">Esri World Imagery (no labels)</option>
             </select>
           </div>
+          <div>
+            <label>Photo area size</label>
+            <select id="layoutSplit">
+              <option value="40">Larger GPS map (40% photo)</option>
+              <option value="50" selected>Equal halves (50% photo)</option>
+              <option value="60">Larger photo (60% photo)</option>
+              <option value="70">Maximum photo (70% photo)</option>
+            </select>
+          </div>
         </div>
 
         <div class="checkRow">
@@ -906,6 +951,44 @@
           <label title="Show stopover polygons for the selected bird"><input id="showStopovers" type="checkbox" checked> Stopovers</label>
         </div>
         <div class="miniNote" id="backgroundDataStatus">GPS &amp; stopovers: loading automatically…</div>
+
+        <details class="subSettings" id="lineStyleDetails">
+          <summary>Route lines <span style="font-weight:500; opacity:.72;">appearance</span></summary>
+          <div class="subSettingsBody">
+            <div class="checkRow">
+              <label title="Automatically reduce line weight and opacity when a bird has many photos">
+                <input id="autoTrackDensity" type="checkbox" checked> Adjust to photo density
+              </label>
+            </div>
+
+            <div class="row">
+              <div>
+                <label>Blue photo opacity <span class="lineStyleValue" id="photoLineOpacityValue">100%</span></label>
+                <input id="photoLineOpacity" type="range" min="20" max="200" step="5" value="100">
+              </div>
+              <div>
+                <label>Blue photo width <span class="lineStyleValue" id="photoLineWidthValue">100%</span></label>
+                <input id="photoLineWidth" type="range" min="50" max="200" step="5" value="100">
+              </div>
+            </div>
+
+            <div class="row">
+              <div>
+                <label>Turquoise GPS opacity <span class="lineStyleValue" id="gpsLineOpacityValue">100%</span></label>
+                <input id="gpsLineOpacity" type="range" min="20" max="200" step="5" value="100">
+              </div>
+              <div>
+                <label>Turquoise GPS width <span class="lineStyleValue" id="gpsLineWidthValue">100%</span></label>
+                <input id="gpsLineWidth" type="range" min="50" max="200" step="5" value="100">
+              </div>
+            </div>
+
+            <div class="btnrow">
+              <button id="resetLineStyle" class="secondary tiny" type="button">Reset line style</button>
+            </div>
+            <div class="miniNote">These controls affect the main map. The overview remains clearer and always shows the full route.</div>
+          </div>
+        </details>
 
         <details class="subSettings" id="musicDetails">
           <summary>Music <span style="font-weight:500; opacity:.72;">optional</span></summary>
@@ -961,6 +1044,7 @@
           <select id="birdSelectOverlay" aria-label="Select bird" disabled>
             <option value="">—</option>
           </select>
+          <button id="settingsGear" class="settingsGear" type="button" title="Open settings" aria-label="Open settings">⚙</button>
         </div>
         <div class="photoTools">
           <button id="enlargePhoto" class="secondary tiny" type="button">Enlarge photo</button>
@@ -1030,11 +1114,15 @@
 
   const settingsCard = el("settingsCard");
   const toggleSettingsBtn = el("toggleSettings");
+  const settingsBodyEl = el("settingsBody");
+  const wrapEl = document.querySelector(".wrap");
+  const sideEl = document.querySelector(".side");
 
   const folderInput = el("folderInput");
   const loadGithubBtn = el("loadGithubBtn");
   const birdSelect  = el("birdSelect");
   const birdSelectOverlay = el("birdSelectOverlay");
+  const settingsGearBtn = el("settingsGear");
   const loadBtn     = el("loadBtn");
   const playBtn     = el("playBtn");
   const pauseBtn    = el("pauseBtn");
@@ -1045,6 +1133,7 @@
   const holdSecondsEl = el("holdSeconds");
   const followZoomEl  = el("followZoom");
   const followModeEl  = el("followMode");
+  const layoutSplitEl = el("layoutSplit");
 
   const loopCurrentEl = el("loopCurrent");
   const loopAllEl     = el("loopAll");
@@ -1053,6 +1142,18 @@
   const showPhotoGpsSegmentEl = el("showPhotoGpsSegment");
   const showStopoversEl       = el("showStopovers");
   const backgroundDataStatusEl= el("backgroundDataStatus");
+
+  const autoTrackDensityEl      = el("autoTrackDensity");
+  const photoLineOpacityEl      = el("photoLineOpacity");
+  const photoLineWidthEl        = el("photoLineWidth");
+  const gpsLineOpacityEl        = el("gpsLineOpacity");
+  const gpsLineWidthEl          = el("gpsLineWidth");
+  const photoLineOpacityValueEl = el("photoLineOpacityValue");
+  const photoLineWidthValueEl   = el("photoLineWidthValue");
+  const gpsLineOpacityValueEl   = el("gpsLineOpacityValue");
+  const gpsLineWidthValueEl     = el("gpsLineWidthValue");
+  const resetLineStyleBtn       = el("resetLineStyle");
+  const lineStyleDetailsEl      = el("lineStyleDetails");
 
   const musicSelectEl = el("musicSelect");
   const musicVolEl    = el("musicVol");
@@ -1183,6 +1284,7 @@
   const setSettingsCollapsed = (collapsed) => {
     if (collapsed) clearSettingsAutoClose();
     settingsCard.classList.toggle("settingsCollapsed", collapsed);
+    sideEl.classList.toggle("settingsHidden", collapsed);
     toggleSettingsBtn.textContent = collapsed ? "Show" : "Hide";
   };
   const scheduleSettingsAutoClose = () => {
@@ -1204,6 +1306,22 @@
   });
   settingsCard.addEventListener("pointerenter", clearSettingsAutoClose);
   settingsCard.addEventListener("pointerleave", scheduleSettingsAutoClose);
+  settingsGearBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setSettingsCollapsed(false);
+    lineStyleDetailsEl.open = false;
+    settingsBodyEl.scrollTop = 0;
+    if (isMobile()) {
+      openMobilePanel();
+    } else {
+      settingsCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      scheduleSettingsAutoClose();
+    }
+    setTimeout(() => {
+      settingsBodyEl.scrollTop = 0;
+    }, 60);
+    refreshMapSizes();
+  });
 
 // Default UI state (requested):
 // - Settings panel collapsed by default
@@ -1414,7 +1532,17 @@ loopCurrentEl.checked = false;
   const followMap   = L.map('mapFollow',   { zoomControl: true, worldCopyJump: true }).setView([20, 0], 2);
   // Shorten credits bar (remove Leaflet prefix)
   try { followMap.attributionControl.setPrefix(''); } catch(e) {}
-  const overviewMap = L.map('mapOverview', { zoomControl: false, worldCopyJump: true, attributionControl: false }).setView([20, 0], 2);
+  const overviewMap = L.map('mapOverview', {
+    zoomControl: false,
+    worldCopyJump: true,
+    attributionControl: false,
+    dragging: false,
+    scrollWheelZoom: false,
+    doubleClickZoom: false,
+    boxZoom: false,
+    keyboard: false,
+    touchZoom: false
+  }).setView([20, 0], 2);
 
   // Helper: make sure each map has a labels pane (so place-name tiles sit above imagery)
   const ensureLabelsPane = (map) => {
@@ -1659,6 +1787,101 @@ loopCurrentEl.checked = false;
   let currentProgress = 0;
 
   let userInteracted = false;
+
+  const clampNumber = (value, min, max) => Math.max(min, Math.min(max, value));
+  const linePercent = (element, fallback = 100) => {
+    const value = Number(element && element.value);
+    return Number.isFinite(value) ? value : fallback;
+  };
+
+  const updateLineStyleReadouts = () => {
+    photoLineOpacityValueEl.textContent = `${linePercent(photoLineOpacityEl)}%`;
+    photoLineWidthValueEl.textContent = `${linePercent(photoLineWidthEl)}%`;
+    gpsLineOpacityValueEl.textContent = `${linePercent(gpsLineOpacityEl)}%`;
+    gpsLineWidthValueEl.textContent = `${linePercent(gpsLineWidthEl)}%`;
+  };
+
+  // Keep sparse photo tracks strong, but prevent hundreds of overlapping
+  // segments from obscuring the basemap. User controls act as multipliers on
+  // top of that automatic style. The overview stays deliberately clearer.
+  const applyAdaptiveTrackStyle = (photoCount) => {
+    const sparseCount = 40;
+    const denseCount = 900;
+    const n = Math.max(sparseCount, Number(photoCount) || 0);
+    const density = autoTrackDensityEl.checked
+      ? clampNumber(
+          (Math.log(n) - Math.log(sparseCount)) /
+          (Math.log(denseCount) - Math.log(sparseCount)),
+          0,
+          1
+        )
+      : 0;
+
+    const photoOpacityScale = linePercent(photoLineOpacityEl) / 100;
+    const photoWidthScale = linePercent(photoLineWidthEl) / 100;
+    const gpsOpacityScale = linePercent(gpsLineOpacityEl) / 100;
+    const gpsWidthScale = linePercent(gpsLineWidthEl) / 100;
+
+    const photoBaseWeight = 4 - 2.7 * density;
+    const photoBaseOpacity = 0.90 - 0.75 * density;
+    const gpsBaseWeight = 2 - 0.8 * density;
+    const gpsBaseOpacity = 0.58 - 0.36 * density;
+
+    followLine.setStyle({
+      weight: clampNumber(photoBaseWeight * photoWidthScale, 0.5, 8),
+      opacity: clampNumber(photoBaseOpacity * photoOpacityScale, 0.02, 1)
+    });
+    gpsFullFollowLine.setStyle({
+      weight: clampNumber(gpsBaseWeight * gpsWidthScale, 0.5, 6),
+      opacity: clampNumber(gpsBaseOpacity * gpsOpacityScale, 0.02, 1)
+    });
+
+    // The small overview must remain legible even for very dense tracks.
+    overviewLine.setStyle({
+      weight: 3 - 1.2 * density,
+      opacity: 0.85 - 0.25 * density
+    });
+    gpsFullOverviewLine.setStyle({
+      weight: 2 - 0.5 * density,
+      opacity: 0.55 - 0.10 * density
+    });
+  };
+
+  const refreshLineStyle = () => {
+    updateLineStyleReadouts();
+    applyAdaptiveTrackStyle(track.length);
+  };
+
+  for (const input of [photoLineOpacityEl, photoLineWidthEl, gpsLineOpacityEl, gpsLineWidthEl]) {
+    input.addEventListener("input", refreshLineStyle);
+  }
+  autoTrackDensityEl.addEventListener("change", refreshLineStyle);
+  resetLineStyleBtn.addEventListener("click", () => {
+    autoTrackDensityEl.checked = true;
+    photoLineOpacityEl.value = "100";
+    photoLineWidthEl.value = "100";
+    gpsLineOpacityEl.value = "100";
+    gpsLineWidthEl.value = "100";
+    refreshLineStyle();
+  });
+  updateLineStyleReadouts();
+
+  const fitOverviewToFullRoute = () => {
+    const allPoints = [];
+    for (const p of currentGpsPoints) allPoints.push([p.lat, p.lon]);
+    for (const p of track) allPoints.push([p.lat, p.lon]);
+
+    if (allPoints.length >= 2) {
+      const bounds = L.latLngBounds(allPoints);
+      if (bounds.isValid()) {
+        overviewMap.fitBounds(bounds, { padding: [12,12], animate: false });
+      }
+    } else if (allPoints.length === 1) {
+      overviewMap.setView(allPoints[0], 4, { animate: false });
+    } else {
+      overviewMap.setView([20, 0], 2, { animate: false });
+    }
+  };
 
   const cleanupObjectURLs = () => {
     for (const p of track) if (p.url) URL.revokeObjectURL(p.url);
@@ -1920,12 +2143,13 @@ loopCurrentEl.checked = false;
   const renderBackgroundLayers = (id) => {
     currentGpsPoints = id ? (gpsTracksByBird.get(id) || []) : [];
     const gpsLatLngs = currentGpsPoints.map(p => [p.lat, p.lon]);
+    // The overview always shows the complete GPS route, even if the full GPS
+    // layer is hidden on the main map.
+    gpsFullOverviewLine.setLatLngs(gpsLatLngs);
     if (showGpsTrackEl.checked) {
       gpsFullFollowLine.setLatLngs(gpsLatLngs);
-      gpsFullOverviewLine.setLatLngs(gpsLatLngs);
     } else {
       gpsFullFollowLine.setLatLngs([]);
-      gpsFullOverviewLine.setLatLngs([]);
     }
 
     stopoverFollowLayer.clearLayers();
@@ -1943,6 +2167,7 @@ loopCurrentEl.checked = false;
     }
 
     updateCurrentGpsSegment(segIndex);
+    fitOverviewToFullRoute();
   };
 
   const nearestGpsPoint = (latlng, points) => {
@@ -1987,10 +2212,6 @@ loopCurrentEl.checked = false;
       gpsLoadSummary = `GPS: ${parsed.pointCount.toLocaleString()} points / ${parsed.birdCount} birds`;
       updateBackgroundDataStatus();
       renderBackgroundLayers(birdId);
-      if (birdId && currentGpsPoints.length) {
-        const boundsPoints = track.map(p => [p.lat, p.lon]).concat(currentGpsPoints.map(p => [p.lat, p.lon]));
-        if (boundsPoints.length >= 2) overviewMap.fitBounds(boundsPoints, { padding: [12,12] });
-      }
       return true;
     } catch (error) {
       gpsLoadSummary = `GPS: failed (${error.message})`;
@@ -2086,11 +2307,38 @@ loopCurrentEl.checked = false;
   const refreshMapSizes = () => {
     requestAnimationFrame(() => {
       try { followMap.invalidateSize(); } catch(e) {}
-      try { overviewMap.invalidateSize(); } catch(e) {}
+      try {
+        overviewMap.invalidateSize();
+        fitOverviewToFullRoute();
+      } catch(e) {}
     });
   };
   window.addEventListener("resize", refreshMapSizes);
   setTimeout(refreshMapSizes, 100);
+
+  const validPhotoShares = new Set(["40", "50", "60", "70"]);
+  try {
+    const savedPhotoShare = localStorage.getItem("storkViewerPhotoShare");
+    if (validPhotoShares.has(savedPhotoShare)) layoutSplitEl.value = savedPhotoShare;
+  } catch(e) {}
+
+  const applyLayoutSplit = ({ persist = true } = {}) => {
+    const photoShare = Number(layoutSplitEl.value) || 50;
+    const mapShare = 100 - photoShare;
+
+    // Desktop: split the screen width. Mobile: split the screen height.
+    wrapEl.style.gridTemplateColumns = `minmax(0, ${mapShare}fr) minmax(0, ${photoShare}fr)`;
+    document.documentElement.style.setProperty("--mobile-map-height", `${mapShare}dvh`);
+    document.documentElement.style.setProperty("--mobile-photo-height", `${photoShare}dvh`);
+
+    if (persist) {
+      try { localStorage.setItem("storkViewerPhotoShare", String(photoShare)); } catch(e) {}
+    }
+    refreshMapSizes();
+  };
+
+  layoutSplitEl.addEventListener("change", () => applyLayoutSplit());
+  applyLayoutSplit({ persist: false });
 
   const stopAnim = () => {
     playing = false;
@@ -2526,6 +2774,7 @@ loopCurrentEl.checked = false;
   const activateTrack = (points) => {
     cleanupObjectURLs();
     track = points.map(p => ({...p, url: (p.file instanceof File ? URL.createObjectURL(p.file) : p.file)}));
+    applyAdaptiveTrackStyle(track.length);
   };
 
   const updateSliderMax = () => {
@@ -2625,11 +2874,7 @@ loopCurrentEl.checked = false;
 
     overviewLine.setLatLngs(latlngs);
     overviewMarker.setLatLng(start);
-    const overviewLatLngs = showGpsTrackEl.checked && currentGpsPoints.length
-      ? latlngs.concat(currentGpsPoints.map(p => [p.lat, p.lon]))
-      : latlngs;
-    if (overviewLatLngs.length >= 2) overviewMap.fitBounds(overviewLatLngs, { padding: [12,12] });
-    else overviewMap.setView(start, 3);
+    fitOverviewToFullRoute();
 
     const z = Math.max(2, Math.min(18, parseInt(followZoomEl.value||"12",10)));
     followMarker.setLatLng(start);

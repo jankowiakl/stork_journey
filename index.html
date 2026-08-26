@@ -282,6 +282,58 @@
       transition: opacity 80ms linear;
     }
 
+    .photoBirdPicker {
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      max-width: calc(100% - 150px);
+      padding: 6px 8px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 12px;
+      background: rgba(7,11,20,.30);
+      box-shadow: 0 8px 22px rgba(0,0,0,.18);
+      backdrop-filter: blur(7px);
+      -webkit-backdrop-filter: blur(7px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .16s ease, background .16s ease;
+    }
+    .photoStage.navControlsVisible .photoBirdPicker {
+      opacity: .72;
+      pointer-events: auto;
+    }
+    .photoBirdPicker:hover,
+    .photoBirdPicker:focus-within {
+      opacity: 1;
+      background: rgba(7,11,20,.68);
+    }
+    .photoBirdPicker label {
+      margin: 0;
+      color: rgba(255,255,255,.78);
+      font-size: 11px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+    #birdSelectOverlay {
+      width: auto;
+      min-width: 132px;
+      max-width: min(250px, 40vw);
+      padding: 6px 28px 6px 8px;
+      border-radius: 9px;
+      border: 1px solid rgba(255,255,255,.16);
+      background-color: rgba(7,11,20,.52);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    #birdSelectOverlay option { background: #0b1220; color: #fff; }
+    #birdSelectOverlay:disabled { opacity: .55; cursor: default; }
+
     .metaGrid { 
       display: grid; 
       gap: 6px; 
@@ -373,6 +425,17 @@
       z-index:20;
       display:flex;
       gap:8px;
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .16s ease;
+    }
+    .photoStage.navControlsVisible .photoTools {
+      opacity:.72;
+      pointer-events:auto;
+    }
+    .photoTools:hover,
+    .photoTools:focus-within {
+      opacity:1;
     }
 
     .photoNav {
@@ -586,8 +649,14 @@
     padding-right: 0;
   }
   .photoCard { order: 1; height: 50dvh; min-height: 45dvh; }
-    /* Mobile: no need for the "Enlarge photo" button */
-  #enlargePhoto { display: none !important; }
+  .photoBirdPicker {
+    max-width: calc(100% - 24px);
+    padding: 5px 7px;
+  }
+  #birdSelectOverlay {
+    min-width: 112px;
+    max-width: 58vw;
+  }
 .metaCard  { order: 2; }
   #settingsCard { order: 3; }
 
@@ -604,12 +673,29 @@
   }
   .photoNav { opacity: 0; pointer-events: none; }
   .photoNav:disabled { opacity: 0 !important; }
+  .photoBirdPicker,
+  .photoBirdPicker:hover,
+  .photoBirdPicker:focus-within,
+  .photoTools,
+  .photoTools:hover,
+  .photoTools:focus-within {
+    opacity: 0;
+    pointer-events: none;
+  }
   .photoStage.touchControlsVisible #sliderOverlay {
     opacity: 1;
     pointer-events: auto;
   }
   .photoStage.touchControlsVisible .photoNav {
     opacity: .62;
+    pointer-events: auto;
+  }
+  .photoStage.touchControlsVisible .photoBirdPicker {
+    opacity: .88;
+    pointer-events: auto;
+  }
+  .photoStage.touchControlsVisible .photoTools {
+    opacity: .82;
     pointer-events: auto;
   }
   .photoStage.touchControlsVisible .photoNav:disabled { opacity: .10 !important; }
@@ -870,6 +956,12 @@
 
     <div class="card photoCard">
       <div class="photoStage">
+        <div class="photoBirdPicker">
+          <label for="birdSelectOverlay">Bird</label>
+          <select id="birdSelectOverlay" aria-label="Select bird" disabled>
+            <option value="">—</option>
+          </select>
+        </div>
         <div class="photoTools">
           <button id="enlargePhoto" class="secondary tiny" type="button">Enlarge photo</button>
         </div>
@@ -942,6 +1034,7 @@
   const folderInput = el("folderInput");
   const loadGithubBtn = el("loadGithubBtn");
   const birdSelect  = el("birdSelect");
+  const birdSelectOverlay = el("birdSelectOverlay");
   const loadBtn     = el("loadBtn");
   const playBtn     = el("playBtn");
   const pauseBtn    = el("pauseBtn");
@@ -1081,15 +1174,36 @@
   });
 
   // Collapsible settings
+  let settingsAutoCloseTimer = null;
+  const settingsAutoCloseMQ = window.matchMedia("(hover: hover) and (pointer: fine)");
+  const clearSettingsAutoClose = () => {
+    if (settingsAutoCloseTimer) clearTimeout(settingsAutoCloseTimer);
+    settingsAutoCloseTimer = null;
+  };
   const setSettingsCollapsed = (collapsed) => {
+    if (collapsed) clearSettingsAutoClose();
     settingsCard.classList.toggle("settingsCollapsed", collapsed);
     toggleSettingsBtn.textContent = collapsed ? "Show" : "Hide";
+  };
+  const scheduleSettingsAutoClose = () => {
+    clearSettingsAutoClose();
+    if (!settingsAutoCloseMQ.matches || settingsCard.classList.contains("settingsCollapsed")) return;
+    settingsAutoCloseTimer = setTimeout(() => {
+      settingsAutoCloseTimer = null;
+      if (!settingsCard.matches(":hover")) {
+        setSettingsCollapsed(true);
+        refreshMapSizes();
+      }
+    }, 4000);
   };
   toggleSettingsBtn.addEventListener("click", () => {
     const collapsed = settingsCard.classList.contains("settingsCollapsed");
     setSettingsCollapsed(!collapsed);
+    if (collapsed) scheduleSettingsAutoClose();
     refreshMapSizes();
   });
+  settingsCard.addEventListener("pointerenter", clearSettingsAutoClose);
+  settingsCard.addEventListener("pointerleave", scheduleSettingsAutoClose);
 
 // Default UI state (requested):
 // - Settings panel collapsed by default
@@ -2095,13 +2209,28 @@ loopCurrentEl.checked = false;
 
   const idsSorted = () => Array.from(groupedFiles.keys()).sort();
 
+  const updateBirdSelectors = (ids = idsSorted()) => {
+    for (const select of [birdSelect, birdSelectOverlay]) {
+      select.replaceChildren(new Option(ids.length ? "— select —" : "—", ""));
+      for (const id of ids) {
+        const n = groupedFiles.get(id).length;
+        select.add(new Option(`${id} (${n} files)`, id));
+      }
+      select.disabled = ids.length === 0;
+    }
+  };
+
+  const setBirdSelection = (id) => {
+    birdSelect.value = id || "";
+    birdSelectOverlay.value = id || "";
+  };
+
   const loadLocalFiles = () => {
     const files = Array.from(folderInput.files || []);
     const jpgs = files.filter(f => /\.(jpe?g)$/i.test(f.name));
 
     if (!jpgs.length) {
-      birdSelect.innerHTML = `<option value="">—</option>`;
-      birdSelect.disabled = true;
+      updateBirdSelectors([]);
       loadBtn.disabled = true;
       setStatus("No JPG files selected.");
       return;
@@ -2125,11 +2254,7 @@ loopCurrentEl.checked = false;
     }
 
     const ids = idsSorted();
-    birdSelect.innerHTML = `<option value="">— select —</option>` + ids.map(id => {
-      const n = groupedFiles.get(id).length;
-      return `<option value="${id}">${id} (${n} files)</option>`;
-    }).join("");
-    birdSelect.disabled = false;
+    updateBirdSelectors(ids);
     loadBtn.disabled = true;
     playBtn.disabled = true;
     pauseBtn.disabled = true;
@@ -2272,6 +2397,7 @@ loopCurrentEl.checked = false;
   const loadGithubFiles = async () => {
     groupedFiles.clear();
     trackCache.clear();
+    updateBirdSelectors([]);
 
     cleanupObjectURLs();
     track = [];
@@ -2336,11 +2462,7 @@ loopCurrentEl.checked = false;
       }
 
       const ids = idsSorted();
-      birdSelect.innerHTML = `<option value="">— select —</option>` + ids.map(id => {
-        const n = groupedFiles.get(id).length;
-        return `<option value="${id}">${id} (${n} files)</option>`;
-      }).join("");
-      birdSelect.disabled = false;
+      updateBirdSelectors(ids);
       loadBtn.disabled = true;
       playBtn.disabled = true;
       pauseBtn.disabled = true;
@@ -2358,7 +2480,7 @@ loopCurrentEl.checked = false;
 
       if (ids.length > 0) {
         const firstId = ids[0];
-        birdSelect.value = firstId;
+        setBirdSelection(firstId);
         await loadTrackFor(firstId, {autoplay: true});
       }
     } catch (err) {
@@ -2375,12 +2497,17 @@ loopCurrentEl.checked = false;
     await loadGithubFiles();
   });
 
-  birdSelect.addEventListener("change", async () => {
-    const id = birdSelect.value;
+  const handleBirdSelectionChange = async (sourceSelect) => {
+    const id = sourceSelect.value;
+    setBirdSelection(id);
+    loadBtn.disabled = !id;
     if (id) {
       await loadTrackFor(id, {autoplay: true});
     }
-  });
+  };
+
+  birdSelect.addEventListener("change", () => handleBirdSelectionChange(birdSelect));
+  birdSelectOverlay.addEventListener("change", () => handleBirdSelectionChange(birdSelectOverlay));
 
   const setLoadingUI = (loading) => {
     loadBtn.disabled = loading || !birdSelect.value;
@@ -2473,7 +2600,7 @@ loopCurrentEl.checked = false;
       setStatus(loadMessage);
     }
 
-    if (birdSelect.value !== id) birdSelect.value = id;
+    setBirdSelection(id);
 
     segIndex = 0;
     renderBackgroundLayers(id);

@@ -875,8 +875,8 @@
         </div>
         <button id="prevPhoto" class="photoNav prev" type="button" title="Previous photo" aria-label="Previous photo" disabled>−1</button>
         <button id="nextPhoto" class="photoNav next" type="button" title="Next photo" aria-label="Next photo" disabled>+1</button>
-        <img id="imgA" alt="photo A" style="opacity:1;">
-        <img id="imgB" alt="photo B" style="opacity:0;">
+        <img id="imgA" alt="photo A" decoding="async" fetchpriority="high" style="opacity:1;">
+        <img id="imgB" alt="photo B" decoding="async" fetchpriority="low" style="opacity:0;">
         <div id="sliderOverlay" style="display:none;">
           <div class="sliderRow">
             <button id="sliderPlayPause" class="secondary tiny" type="button" disabled>Play</button>
@@ -920,8 +920,8 @@
       </div>
     </div>
     <div class="stage">
-      <img id="modalImgA" alt="modal photo A" style="opacity:1;">
-      <img id="modalImgB" alt="modal photo B" style="opacity:0;">
+      <img id="modalImgA" alt="modal photo A" decoding="async" style="opacity:1;">
+      <img id="modalImgB" alt="modal photo B" decoding="async" style="opacity:0;">
     </div>
   </div>
 </div>
@@ -1114,6 +1114,9 @@ loopCurrentEl.checked = false;
   const closePhoto = () => {
     photoModal.classList.remove("open");
     photoModal.setAttribute("aria-hidden", "true");
+    // Release the modal's decoded-image references when it is not visible.
+    modalImgA.removeAttribute("src");
+    modalImgB.removeAttribute("src");
     setSettingsCollapsed(prevSettingsCollapsed);
   };
   enlargePhotoBtn.addEventListener("click", openPhoto);
@@ -1525,6 +1528,7 @@ loopCurrentEl.checked = false;
   let gpsHitPoints = [];
   let gpsLoadSummary = "GPS: loading…";
   let stopoverLoadSummary = "Stopovers: loading…";
+  let gpsDatasetPromise = null;
 
   let track = [];
   let birdId = null;
@@ -1863,7 +1867,7 @@ loopCurrentEl.checked = false;
 
   const loadGpsDataset = async () => {
     try {
-      const response = await fetch(GPS_DATA_URL, { cache: "no-store" });
+      const response = await fetch(GPS_DATA_URL, { cache: "default" });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const parsed = parseGpsDataset(await response.text());
       gpsLoadSummary = `GPS: ${parsed.pointCount.toLocaleString()} points / ${parsed.birdCount} birds`;
@@ -1873,11 +1877,18 @@ loopCurrentEl.checked = false;
         const boundsPoints = track.map(p => [p.lat, p.lon]).concat(currentGpsPoints.map(p => [p.lat, p.lon]));
         if (boundsPoints.length >= 2) overviewMap.fitBounds(boundsPoints, { padding: [12,12] });
       }
+      return true;
     } catch (error) {
       gpsLoadSummary = `GPS: failed (${error.message})`;
       updateBackgroundDataStatus();
       console.error("GPS data load failed", error);
+      return false;
     }
+  };
+
+  const ensureGpsDatasetLoaded = () => {
+    if (!gpsDatasetPromise) gpsDatasetPromise = loadGpsDataset();
+    return gpsDatasetPromise;
   };
 
   const loadStopoverDataset = async () => {
@@ -1889,7 +1900,7 @@ loopCurrentEl.checked = false;
         gpLib.setSqljsWasmLocateFile(file => `https://unpkg.com/@ngageoint/geopackage/dist/${file}`);
       }
 
-      const response = await fetch(STOPOVER_DATA_URL, { cache: "no-store" });
+      const response = await fetch(STOPOVER_DATA_URL, { cache: "default" });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const bytes = new Uint8Array(await response.arrayBuffer());
       const manager = gpLib.GeoPackageManager || gpLib.GeoPackageAPI;
@@ -1936,7 +1947,10 @@ loopCurrentEl.checked = false;
 
   const loadBackgroundData = () => {
     updateBackgroundDataStatus();
-    Promise.allSettled([loadGpsDataset(), loadStopoverDataset()]);
+    return {
+      gps: ensureGpsDatasetLoaded(),
+      stopovers: loadStopoverDataset()
+    };
   };
 
   showGpsTrackEl.addEventListener("change", () => renderBackgroundLayers(birdId));
@@ -2187,17 +2201,72 @@ loopCurrentEl.checked = false;
     return tmp;
   };
 
-  const preloadTrack = async (id) => {
-    if (trackCache.has(id)) return;
-    const files = groupedFiles.get(id);
-    const tmp = await readGpsFromFiles(files);
-    tmp.sort((a,b) => {
+  // Remote photos are positioned from the already-downloaded GPS timeline.
+  // This avoids fetching every JPG merely to read its EXIF block. The actual
+  // image bytes are therefore requested only when imgA/imgB display them.
+  const PHOTO_GPS_MAX_NEAREST_MS = 3 * 60 * 60 * 1000;
+  const PHOTO_GPS_MAX_INTERPOLATION_GAP_MS = 6 * 60 * 60 * 1000;
+
+  const estimatePhotoPosition = (timedGps, dt) => {
+    if (!dt || !timedGps.length) return null;
+    const target = dt.getTime();
+
+    let lo = 0;
+    let hi = timedGps.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (timedGps[mid].dt.getTime() < target) lo = mid + 1;
+      else hi = mid;
+    }
+
+    const before = lo > 0 ? timedGps[lo - 1] : null;
+    const after = lo < timedGps.length ? timedGps[lo] : null;
+
+    if (before && after) {
+      const t0 = before.dt.getTime();
+      const t1 = after.dt.getTime();
+      const gap = t1 - t0;
+      if (gap >= 0 && gap <= PHOTO_GPS_MAX_INTERPOLATION_GAP_MS) {
+        const ratio = gap === 0 ? 0 : Math.max(0, Math.min(1, (target - t0) / gap));
+        return {
+          lat: lerp(before.lat, after.lat, ratio),
+          lon: lerpLonShortest(before.lon, after.lon, ratio)
+        };
+      }
+    }
+
+    const nearest = !before ? after : !after ? before :
+      (target - before.dt.getTime() <= after.dt.getTime() - target ? before : after);
+    if (!nearest || Math.abs(nearest.dt.getTime() - target) > PHOTO_GPS_MAX_NEAREST_MS) return null;
+    return { lat: nearest.lat, lon: nearest.lon };
+  };
+
+  const buildRemoteTrackFromGps = (id, files) => {
+    const timedGps = (gpsTracksByBird.get(id) || []).filter(p => p.dt);
+    const points = [];
+    let skipped = 0;
+
+    for (const entry of files) {
+      const position = estimatePhotoPosition(timedGps, entry.dt);
+      if (!position) {
+        skipped++;
+        continue;
+      }
+      points.push({
+        ...entry,
+        lat: position.lat,
+        lon: position.lon,
+        locationSource: "gps-timeline"
+      });
+    }
+
+    points.sort((a,b) => {
       const ta = a.dt ? a.dt.getTime() : Infinity;
       const tb = b.dt ? b.dt.getTime() : Infinity;
       if (ta !== tb) return ta - tb;
       return a.name.localeCompare(b.name);
     });
-    trackCache.set(id, tmp);
+    return { points, skipped, gpsPointCount: timedGps.length };
   };
 
   const loadGithubFiles = async () => {
@@ -2227,7 +2296,7 @@ loopCurrentEl.checked = false;
 
     try {
       const res = await fetch(PHOTO_TREE_URL, {
-        cache: "no-store",
+        cache: "default",
         headers: { Accept: "application/vnd.github+json" }
       });
       const data = await res.json();
@@ -2283,7 +2352,7 @@ loopCurrentEl.checked = false;
         `- JPG files: ${jpgCount}\n` +
         `- Repository entries checked: ${data.tree.length}\n` +
         `- Individuals detected: ${ids.length}\n\n` +
-        `Pick an individual to load the track (EXIF GPS will be read from remote images).`
+        `Photos are downloaded on demand (current photo + one-photo buffer).`
       );
       refreshMapSizes();
 
@@ -2300,9 +2369,10 @@ loopCurrentEl.checked = false;
   loadGithubBtn.addEventListener("click", loadGithubFiles);
 
   // Automatically load photos, full GPS tracks and stopovers on page load.
-  window.addEventListener("load", () => {
-    loadBackgroundData();
-    loadGithubFiles();
+  window.addEventListener("load", async () => {
+    const backgroundLoads = loadBackgroundData();
+    await backgroundLoads.gps;
+    await loadGithubFiles();
   });
 
   birdSelect.addEventListener("change", async () => {
@@ -2356,31 +2426,51 @@ loopCurrentEl.checked = false;
     birdId = id;
     metaBird.textContent = `Bird: ${birdId}`;
     clearMaps();
+    const files = groupedFiles.get(id);
+    const remoteFiles = files.every(entry => typeof entry.file === "string");
 
     if (trackCache.has(id)) {
       const cached = trackCache.get(id);
       activateTrack(cached);
       metaInfo.textContent = `Photos used: ${track.length}`;
-      setStatus(`Loaded bird ${id} from cache.\nUsable geotagged photos: ${track.length}`);
+      setStatus(
+        remoteFiles
+          ? `Loaded bird ${id} from cache.\nPhotos indexed: ${track.length}.\nImage downloads: current photo + one-photo buffer.`
+          : `Loaded local bird ${id} from cache.\nUsable geotagged photos: ${track.length}`
+      );
     } else {
-      const files = groupedFiles.get(id);
-      setStatus(`Reading EXIF GPS for ${id}… (0 / ${files.length})`);
-      const tmp = await readGpsFromFiles(files, (completed, kept) => {
-        setStatus(`Reading EXIF GPS for ${id}… (${completed} / ${files.length})\nKept points: ${kept}`);
-      });
+      let tmp = [];
+      let loadMessage = "";
 
-      tmp.sort((a,b) => {
-        const ta = a.dt ? a.dt.getTime() : Infinity;
-        const tb = b.dt ? b.dt.getTime() : Infinity;
-        if (ta !== tb) return ta - tb;
-        return a.name.localeCompare(b.name);
-      });
+      if (remoteFiles) {
+        setStatus(`Preparing ${id} from lightweight GPS metadata…`);
+        await ensureGpsDatasetLoaded();
+        const matched = buildRemoteTrackFromGps(id, files);
+        tmp = matched.points;
+        loadMessage =
+          `Loaded bird ${id}.\n` +
+          `Photos indexed: ${tmp.length}${matched.skipped ? ` (${matched.skipped} skipped: no matching GPS time)` : ""}.\n` +
+          `Image downloads: current photo + one-photo buffer.`;
+      } else {
+        setStatus(`Reading EXIF GPS for ${id}… (0 / ${files.length})`);
+        tmp = await readGpsFromFiles(files, (completed, kept) => {
+          setStatus(`Reading EXIF GPS for ${id}… (${completed} / ${files.length})\nKept points: ${kept}`);
+        });
+
+        tmp.sort((a,b) => {
+          const ta = a.dt ? a.dt.getTime() : Infinity;
+          const tb = b.dt ? b.dt.getTime() : Infinity;
+          if (ta !== tb) return ta - tb;
+          return a.name.localeCompare(b.name);
+        });
+        loadMessage = `Loaded local bird ${id}.\nUsable geotagged photos: ${tmp.length}`;
+      }
 
       trackCache.set(id, tmp);
       activateTrack(tmp);
 
       metaInfo.textContent = `Photos used: ${track.length}`;
-      setStatus(`Loaded bird ${id}.\nUsable geotagged photos: ${track.length}`);
+      setStatus(loadMessage);
     }
 
     if (birdSelect.value !== id) birdSelect.value = id;
@@ -2392,7 +2482,11 @@ loopCurrentEl.checked = false;
       playBtn.disabled = true;
       pauseBtn.disabled = true;
       resetBtn.disabled = false;
-      setStatus(`Loaded bird ${id}.\nUsable geotagged photos: 0\n\nNo photos with EXIF GPS found for this bird.`);
+      setStatus(
+        remoteFiles
+          ? `Loaded bird ${id}.\nUsable photos: 0\n\nNo photo times could be matched to this bird's GPS track.`
+          : `Loaded local bird ${id}.\nUsable photos: 0\n\nNo photos with EXIF GPS were found.`
+      );
       setLoadingUI(false);
       syncSliderPlayPause();
       sliderOverlay.style.display = "none";
